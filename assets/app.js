@@ -911,6 +911,46 @@ function setupProductDuplicateModal() {
     });
 }
 
+function setupQueuePrioritizeModal() {
+    const modal = document.querySelector('[data-queue-prioritize-modal]');
+
+    if (!(modal instanceof HTMLElement)) {
+        return;
+    }
+
+    const prioritizeButton = modal.querySelector('[data-queue-prioritize-action]');
+
+    function closeModal() {
+        modal.hidden = true;
+        body.classList.remove('modal-open');
+    }
+
+    if (!modal.hidden) {
+        body.classList.add('modal-open');
+    }
+
+    modal.querySelectorAll('[data-close-queue-prioritize-modal]').forEach((button) => {
+        button.addEventListener('click', closeModal);
+    });
+
+    if (prioritizeButton instanceof HTMLElement) {
+        prioritizeButton.addEventListener('click', () => {
+            const targetUrl = prioritizeButton.getAttribute('data-queue-prioritize-url');
+            closeModal();
+
+            if (targetUrl) {
+                window.location.href = targetUrl;
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.hidden) {
+            event.preventDefault();
+        }
+    });
+}
+
 function toggleProductRecalculationPanel(shouldOpen) {
     const panel = document.querySelector('[data-product-recalc-panel]');
 
@@ -3177,6 +3217,7 @@ setupOperationsManager();
 setupHierarchyExportModal();
 setupHierarchyDeleteModal();
 setupProductDuplicateModal();
+setupQueuePrioritizeModal();
 setupDashboardExecutiveLive();
 setupQueueLiveRefresh();
 setupQueueSearchToggle();
@@ -3310,6 +3351,22 @@ document.addEventListener('click', async (event) => {
         panel.toggleAttribute('hidden', !isHidden);
         logToggleButton.setAttribute('aria-expanded', String(isHidden));
         logToggleButton.textContent = isHidden ? 'Ocultar log' : 'Log da venda';
+        return;
+    }
+
+    const commentToggleButton = event.target.closest('[data-toggle-sale-comment]');
+
+    if (commentToggleButton) {
+        const panel = document.querySelector('[data-sale-comment-panel]');
+
+        if (!(panel instanceof HTMLElement)) {
+            return;
+        }
+
+        const isHidden = panel.hasAttribute('hidden');
+        panel.toggleAttribute('hidden', !isHidden);
+        commentToggleButton.setAttribute('aria-expanded', String(isHidden));
+        commentToggleButton.textContent = isHidden ? 'Ocultar coment\u00E1rio' : 'Adicionar coment\u00E1rio';
         return;
     }
 

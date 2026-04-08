@@ -202,6 +202,50 @@ final class ImportQueueRepository
         ];
     }
 
+    public function pendingBeforeDate(string $date, ?array $visibilityScope = null): int
+    {
+        $sql = "SELECT COUNT(*)
+                FROM sales_import_queue
+                LEFT JOIN seller_hierarchies
+                       ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                      AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, '%Y%m')
+                LEFT JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                WHERE sales_import_queue.audit_status = 'PENDENTE INPUT'
+                  AND sales_import_queue.sale_input_date IS NOT NULL
+                  AND sales_import_queue.sale_input_date < :date";
+
+        [$visibilitySql, $visibilityBindings] = $this->buildVisibilityScopeFilters($visibilityScope);
+        $sql .= $visibilitySql;
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute(['date' => $date] + $visibilityBindings);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    public function oldestPendingBeforeDate(string $date, ?array $visibilityScope = null): ?string
+    {
+        $sql = "SELECT MIN(sales_import_queue.sale_input_date)
+                FROM sales_import_queue
+                LEFT JOIN seller_hierarchies
+                       ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                      AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, '%Y%m')
+                LEFT JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                WHERE sales_import_queue.audit_status = 'PENDENTE INPUT'
+                  AND sales_import_queue.sale_input_date IS NOT NULL
+                  AND sales_import_queue.sale_input_date < :date";
+
+        [$visibilitySql, $visibilityBindings] = $this->buildVisibilityScopeFilters($visibilityScope);
+        $sql .= $visibilitySql;
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute(['date' => $date] + $visibilityBindings);
+
+        $value = $statement->fetchColumn();
+
+        return $value !== false && $value !== null ? (string) $value : null;
+    }
+
     private function buildSearchFilters(
         ?array $statuses = null,
         ?string $term = null,

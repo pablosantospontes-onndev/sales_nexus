@@ -238,3 +238,63 @@
         'dateToFilter' => $dateToFilter,
     ]) ?>
 </div>
+
+<?php if (! empty($showPrioritizeModal) && ($pendingPriorCount ?? 0) > 0): ?>
+    <?php
+    $prioritizeUrl = url('queue', [
+        'status' => 'PENDENTE INPUT',
+        'date_from' => $prioritizeDateFrom ?? '',
+        'date_to' => $prioritizeDateTo ?? '',
+    ]);
+    $todayLabel = format_date_br(date('Y-m-d'));
+    $prioritizeDateLabel = format_date_br($prioritizeDateTo ?? date('Y-m-d'));
+    ?>
+    <div class="modal-shell" data-queue-prioritize-modal>
+        <div class="modal-backdrop"></div>
+        <div class="modal-card queue-prioritize-modal-card" role="dialog" aria-modal="true" aria-labelledby="queue-prioritize-title">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Fila de auditoria</p>
+                    <h4 id="queue-prioritize-title">Vendas pendentes de dias anteriores</h4>
+                </div>
+            </div>
+
+            <p class="muted">
+                Existem <strong class="queue-prioritize-highlight"><?= e((string) ($pendingPriorCount ?? 0)) ?></strong> venda(s) de datas anteriores que ainda n&atilde;o foram finalizadas.
+            </p>
+
+            <div class="queue-prioritize-grid">
+                <div class="queue-prioritize-card">
+                    <span class="eyebrow">Data atual</span>
+                    <strong><?= e($todayLabel) ?></strong>
+                </div>
+                <div class="queue-prioritize-arrow" aria-hidden="true">&#8594;</div>
+                <div class="queue-prioritize-card is-emphasis">
+                    <span class="eyebrow">Priorizar at&eacute;</span>
+                    <strong><?= e($prioritizeDateLabel) ?></strong>
+                </div>
+            </div>
+
+            <div class="queue-prioritize-note">
+                <strong>O que acontece?</strong>
+                <p>Ao priorizar, a fila ser&aacute; filtrada automaticamente para mostrar apenas vendas pendentes de dias anteriores.</p>
+            </div>
+
+            <div class="form-actions">
+                <div class="form-actions-left">
+                    <button type="button" class="secondary-button" data-close-queue-prioritize-modal>Seguir sem priorizar</button>
+                </div>
+                <div class="form-actions-right">
+                    <button
+                        type="button"
+                        class="primary-button"
+                        data-queue-prioritize-action
+                        data-queue-prioritize-url="<?= e($prioritizeUrl) ?>"
+                    >
+                        Priorizar essas vendas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>

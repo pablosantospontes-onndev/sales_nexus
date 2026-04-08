@@ -920,6 +920,50 @@ switch ($route) {
         redirect('queue', $queueContextParams);
         break;
 
+
+    case 'queue/comment':
+        if (! is_post() || ! Csrf::verify($_POST['_token'] ?? null)) {
+            flash('error', 'Token de segurança inválido.');
+            redirect('queue');
+        }
+
+        $id = (int) ($_GET['id'] ?? 0);
+        $queueContextParams = queueContextParamsFromRequest();
+        $queueOperationFilter = (array) ($queueContextParams['operation'] ?? []);
+        $queueTermFilter = (string) ($queueContextParams['term'] ?? '');
+        $queueItem = $queueRepository->findById($id, currentUserQueueScope(), $queueOperationFilter !== [] ? $queueOperationFilter : null, $queueOperationFilter !== [] || $queueTermFilter !== '');
+
+        if ($queueItem === null) {
+            flash('error', 'Venda não encontrada ou fora da sua visão permitida.');
+            redirect('queue', $queueContextParams);
+        }
+
+        if (($queueItem['audit_status'] ?? '') !== 'FINALIZADA') {
+            $claimResult = $queueRepository->claim($id, (int) Auth::id(), Auth::isBackofficeSupervisor());
+
+            if (! $claimResult['success']) {
+                flash('error', $claimResult['message']);
+                redirect('queue', $queueContextParams);
+            }
+        }
+
+        $comment = trim((string) ($_POST['comment'] ?? ''));
+
+        if ($comment === '') {
+            flash('error', 'Digite um comentário para registrar no log.');
+            redirect('queue/show', ['id' => $id] + $queueContextParams);
+        }
+
+        if (mb_strlen($comment) > 200) {
+            flash('error', 'O comentário deve ter até 200 caracteres.');
+            redirect('queue/show', ['id' => $id] + $queueContextParams);
+        }
+
+        $saleLogRepository->logComment($queueItem, (int) Auth::id(), $comment);
+        flash('success', 'Comentário registrado no log da venda.');
+        redirect('queue/show', ['id' => $id] + $queueContextParams);
+        break;
+
     case 'queue/show':
         $id = (int) ($_GET['id'] ?? 0);
         $queueContextParams = queueContextParamsFromRequest();
@@ -1945,6 +1989,16 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         $summaryDateTo = $today;
     }
 
+    $today = date('Y-m-d');
+    $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($today)));
+    $pendingPriorCount = $queueRepository->pendingBeforeDate($today, $regionalScope);
+    $prioritizeDateFrom = $pendingPriorCount > 0
+        ? $queueRepository->oldestPendingBeforeDate($today, $regionalScope)
+        : null;
+    $hasPendingFilter = in_array('PENDENTE INPUT', $statusFilter, true);
+    $hasOlderDateTo = $dateToFilter !== null && $dateToFilter < $today;
+    $showPrioritizeModal = $pendingPriorCount > 0 && ! ($hasPendingFilter && $hasOlderDateTo);
+
     $pageNumber = max(1, (int) ($_GET['page'] ?? 1));
     $queueResult = $queueRepository->search(
         $statusFilter !== [] ? $statusFilter : null,
@@ -2004,6 +2058,10 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         'totalPages' => $queueResult['total_pages'],
         'totalItems' => $queueResult['total'],
         'perPage' => $queueResult['per_page'],
+        'pendingPriorCount' => $pendingPriorCount,
+        'prioritizeDateFrom' => $prioritizeDateFrom,
+        'prioritizeDateTo' => $yesterday,
+        'showPrioritizeModal' => $showPrioritizeModal,
     ];
 }
 

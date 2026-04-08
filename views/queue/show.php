@@ -494,6 +494,7 @@ foreach ($summaryCards as $summaryCard) {
                 <div class="form-actions-left">
                     <a href="<?= e(url('queue', $queueContextParams)) ?>" class="ghost-link">Voltar para fila</a>
                     <button type="button" class="secondary-button" data-toggle-sale-log aria-expanded="false" aria-controls="sale-log-panel">Log da venda</button>
+                    <button type="button" class="secondary-button" data-toggle-sale-comment aria-expanded="false" aria-controls="sale-comment-panel">Adicionar Coment&aacute;rio</button>
                 </div>
                 <div class="form-actions-right">
                     <?php if (! $isFinalizedView): ?>
@@ -503,60 +504,98 @@ foreach ($summaryCards as $summaryCard) {
                 </div>
             </div>
 
-            <div class="sale-log-panel" id="sale-log-panel" data-sale-log-panel hidden>
-                <div class="section-header compact-section-header">
-                    <div>
-                        <span class="eyebrow">Hist&oacute;rico</span>
-                        <h4>Log da venda</h4>
+        </form>
+
+        <div class="sale-comment-panel" id="sale-comment-panel" data-sale-comment-panel hidden>
+            <div class="section-header compact-section-header">
+                <div>
+                    <span class="eyebrow">Anota&ccedil;&atilde;o</span>
+                    <h4>Adicionar coment&aacute;rio ao log</h4>
+                </div>
+            </div>
+
+            <form method="post" action="<?= e(url('queue/comment', ['id' => $queueItem['id']] + $queueContextParams)) ?>" class="sale-comment-form">
+                <?= \App\Core\Csrf::input() ?>
+                <label class="sale-comment-field">
+                    <span>Coment&aacute;rio</span>
+                    <textarea name="comment" class="sale-comment-textarea" rows="4" maxlength="200" placeholder="Digite seu coment&aacute;rio para registrar no log da venda." required></textarea>
+                </label>
+                <div class="form-actions">
+                    <div class="form-actions-left">
+                        <small class="muted">Esse coment&aacute;rio ficar&aacute; registrado no hist&oacute;rico da venda.</small>
+                    </div>
+                    <div class="form-actions-right">
+                        <button type="submit" class="primary-button">Salvar coment&aacute;rio</button>
                     </div>
                 </div>
+            </form>
+        </div>
 
-                <?php if ($saleLogs === []): ?>
-                    <p class="muted">Nenhum log registrado ainda.</p>
-                <?php else: ?>
-                    <div class="sale-log-list">
-                        <?php foreach ($saleLogs as $log): ?>
-                            <?php
-                            $actionLabel = match ($log['action_type']) {
-                                'ACESSO' => 'Acesso',
-                                'ALTERACAO' => 'Alteração',
-                                'FINALIZACAO' => 'Finalização',
-                                default => normalize_text($log['action_type'] ?? ''),
-                            };
-                            $actionClass = match ($log['action_type']) {
-                                'ACESSO' => 'is-access',
-                                'ALTERACAO' => 'is-change',
-                                'FINALIZACAO' => 'is-finalization',
-                                default => '',
-                            };
-                            ?>
-                            <article class="sale-log-item">
-                                <div class="sale-log-item-head">
-                                    <div class="sale-log-item-meta">
-                                        <span class="sale-log-badge <?= e($actionClass) ?>"><?= e($actionLabel) ?></span>
-                                        <strong><?= e($log['user_name'] ?? 'Sistema') ?></strong>
-                                        <small><?= e(format_datetime_br($log['created_at'] ?? null)) ?></small>
-                                    </div>
-                                </div>
-                                <p><?= e($log['summary'] ?? '') ?></p>
-
-                                <?php if (! empty($log['changes']) && is_array($log['changes'])): ?>
-                                    <div class="sale-log-changes">
-                                        <?php foreach ($log['changes'] as $change): ?>
-                                            <div class="sale-log-change-row">
-                                                <strong><?= e($change['field'] ?? '-') ?></strong>
-                                                <small>De: <?= e($change['from'] ?? 'Não informado') ?></small>
-                                                <small>Para: <?= e($change['to'] ?? 'Não informado') ?></small>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+        <div class="sale-log-panel" id="sale-log-panel" data-sale-log-panel hidden>
+            <div class="section-header compact-section-header">
+                <div>
+                    <span class="eyebrow">Hist&oacute;rico</span>
+                    <h4>Log da venda</h4>
+                </div>
             </div>
-        </form>
+
+            <?php if ($saleLogs === []): ?>
+                <p class="muted">Nenhum log registrado ainda.</p>
+            <?php else: ?>
+                <div class="sale-log-list">
+                    <?php foreach ($saleLogs as $log): ?>
+                        <?php
+                        $summary = (string) ($log['summary'] ?? '');
+                        $normalizedSummary = normalize_text($summary);
+                        $isComment = stripos($normalizedSummary, 'comentario:') === 0;
+                        $actionLabel = match ($log['action_type']) {
+                            'ACESSO' => 'Acesso',
+                            'ALTERACAO' => $isComment ? 'Comentário' : 'Alteração',
+                            'FINALIZACAO' => 'Finalização',
+                            default => normalize_text($log['action_type'] ?? ''),
+                        };
+                        $actionClass = match ($log['action_type']) {
+                            'ACESSO' => 'is-access',
+                            'ALTERACAO' => $isComment ? 'is-comment' : 'is-change',
+                            'FINALIZACAO' => 'is-finalization',
+                            default => '',
+                        };
+                        $displaySummary = $summary;
+                        if ($isComment) {
+                            $colonPos = mb_strpos($summary, ':');
+                            $displaySummary = $colonPos === false ? $summary : trim((string) mb_substr($summary, $colonPos + 1));
+                            if ($displaySummary === '') {
+                                $displaySummary = 'Comentário registrado.';
+                            }
+                        }
+                        ?>
+                        <article class="sale-log-item">
+                            <div class="sale-log-item-head">
+                                <div class="sale-log-item-meta">
+                                    <span class="sale-log-badge <?= e($actionClass) ?>"><?= e($actionLabel) ?></span>
+                                    <strong><?= e($log['user_name'] ?? 'Sistema') ?></strong>
+                                    <small><?= e(format_datetime_br($log['created_at'] ?? null)) ?></small>
+                                </div>
+                            </div>
+                            <p><?= e($displaySummary) ?></p>
+
+                            <?php if (! empty($log['changes']) && is_array($log['changes'])): ?>
+                                <div class="sale-log-changes">
+                                    <?php foreach ($log['changes'] as $change): ?>
+                                        <div class="sale-log-change-row">
+                                            <strong><?= e($change['field'] ?? '-') ?></strong>
+                                            <small>De: <?= e($change['from'] ?? 'Não informado') ?></small>
+                                            <small>Para: <?= e($change['to'] ?? 'Não informado') ?></small>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
 
         <?php if (! $isFinalizedView): ?>
             <form method="post" action="<?= e(url('queue/abandon', ['id' => $queueItem['id']] + $queueContextParams)) ?>" id="abandon-sale-form">

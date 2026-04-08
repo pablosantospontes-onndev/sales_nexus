@@ -52,6 +52,29 @@ final class SaleLogRepository
         );
     }
 
+    public function logComment(array $queueItem, int $userId, string $comment, ?PDO $connection = null): void
+    {
+        $comment = trim($comment);
+
+        if ($comment === '') {
+            return;
+        }
+
+        if (mb_strlen($comment) > 200) {
+            $comment = mb_substr($comment, 0, 200);
+        }
+
+        $this->create(
+            (string) ($queueItem['sale_code'] ?? ''),
+            isset($queueItem['id']) ? (int) $queueItem['id'] : null,
+            $userId,
+            'ALTERACAO',
+            'Comentário: ' . $comment,
+            [],
+            $connection
+        );
+    }
+
     public function bySaleCode(string $saleCode): array
     {
         $statement = Database::connection()->prepare(
