@@ -214,7 +214,10 @@ final class HierarchyImportService
                 $existingId = $existingSellerMap[$compositeKey] ?? null;
 
                 if ($existingId !== null) {
-                    $updateStatement->execute($sellerRow + ['id' => $existingId]);
+                    $updatePayload = $sellerRow;
+                    unset($updatePayload['created_by_user_id']);
+                    $updatePayload['id'] = $existingId;
+                    $updateStatement->execute($updatePayload);
                     $updated++;
                     continue;
                 }

@@ -249,7 +249,12 @@
     $todayLabel = format_date_br(date('Y-m-d'));
     $prioritizeDateLabel = format_date_br($prioritizeDateTo ?? date('Y-m-d'));
     ?>
-    <div class="modal-shell" data-queue-prioritize-modal>
+    <div
+        class="modal-shell"
+        data-queue-prioritize-modal
+        data-queue-prioritize-dismiss-url="<?= e(url('queue/dismiss-prioritize')) ?>"
+        data-queue-prioritize-token="<?= e(\App\Core\Csrf::token()) ?>"
+    >
         <div class="modal-backdrop"></div>
         <div class="modal-card queue-prioritize-modal-card" role="dialog" aria-modal="true" aria-labelledby="queue-prioritize-title">
             <div class="section-header">
@@ -280,21 +285,25 @@
                 <p>Ao priorizar, a fila ser&aacute; filtrada automaticamente para mostrar apenas vendas pendentes de dias anteriores.</p>
             </div>
 
-            <div class="form-actions">
-                <div class="form-actions-left">
-                    <button type="button" class="secondary-button" data-close-queue-prioritize-modal>Seguir sem priorizar</button>
-                </div>
-                <div class="form-actions-right">
-                    <button
-                        type="button"
-                        class="primary-button"
-                        data-queue-prioritize-action
-                        data-queue-prioritize-url="<?= e($prioritizeUrl) ?>"
-                    >
-                        Priorizar essas vendas
+                <div class="form-actions">
+                    <div class="form-actions-left">
+                    <button type="button" class="secondary-button queue-prioritize-dismiss-button" data-close-queue-prioritize-modal>
+                        <i class="bi bi-hand-thumbs-down-fill" aria-hidden="true"></i>
+                        Seguir sem priorizar
                     </button>
+                    </div>
+                    <div class="form-actions-right">
+                        <button
+                            type="button"
+                            class="primary-button queue-prioritize-action-button"
+                            data-queue-prioritize-action
+                            data-queue-prioritize-url="<?= e($prioritizeUrl) ?>"
+                        >
+                            <i class="bi bi-hand-thumbs-up-fill" aria-hidden="true"></i>
+                        Priorizar essas vendas
+                        </button>
+                    </div>
                 </div>
-            </div>
         </div>
     </div>
 <?php endif; ?>

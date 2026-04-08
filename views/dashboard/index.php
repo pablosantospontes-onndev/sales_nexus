@@ -6,7 +6,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
     <section class="panel dashboard-mode-panel">
         <div class="dashboard-mode-toolbar">
             <div class="dashboard-mode-copy">
-                <p class="eyebrow">Supervis&atilde;o</p>
+                <p class="eyebrow">Gestão</p>
                 <h3><?= $dashboardExecutiveMode ? 'Painel ao vivo ativo' : 'Painel executivo' ?></h3>
                 <p>
                     <?= $dashboardExecutiveMode
@@ -41,8 +41,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
         type="button"
         class="dashboard-filter-toggle"
         data-collapsible-toggle
-        aria-expanded="<?= $dashboardFiltersOpen ? 'true' : 'false' ?>"
-    >
+        aria-expanded="<?= $dashboardFiltersOpen ? 'true' : 'false' ?>">
         <span class="dashboard-filter-title">
             <small class="eyebrow">Dashboard</small>
             <strong>Filtros</strong>
@@ -51,7 +50,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
     </button>
 
     <div class="dashboard-filter-body" data-collapsible-body <?= $dashboardFiltersOpen ? '' : 'hidden' ?>>
-        <form method="get" class="filters">
+        <form method="get" class="filters dashboard-filters-form">
             <input type="hidden" name="route" value="dashboard">
             <?php if ($dashboardExecutiveMode): ?>
                 <input type="hidden" name="executive" value="1">
@@ -61,8 +60,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
                 class="date-range-field"
                 data-date-range
                 data-initial-start="<?= e($dashboardDateFromFilter ?? '') ?>"
-                data-initial-end="<?= e($dashboardDateToFilter ?? '') ?>"
-            >
+                data-initial-end="<?= e($dashboardDateToFilter ?? '') ?>">
                 <span>Data input</span>
                 <input type="hidden" name="date_from" value="<?= e($dashboardDateFromFilter ?? '') ?>" data-date-range-start>
                 <input type="hidden" name="date_to" value="<?= e($dashboardDateToFilter ?? '') ?>" data-date-range-end>
@@ -107,26 +105,88 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
                 </div>
             </div>
 
-            <label>
+            <div class="queue-status-filter dashboard-customer-type-filter queue-customer-type-filter" data-queue-customer-type-filter>
                 <span>Tipo cliente</span>
-                <select name="customer_type">
-                    <option value="">Todos</option>
-                    <option value="B2C" <?= $dashboardCustomerTypeFilter === 'B2C' ? 'selected' : '' ?>>B2C</option>
-                    <option value="B2B" <?= $dashboardCustomerTypeFilter === 'B2B' ? 'selected' : '' ?>>B2B</option>
-                </select>
-            </label>
+                <button type="button" class="queue-status-trigger" data-queue-customer-type-trigger aria-expanded="false">
+                    <span data-queue-customer-type-summary><?= $dashboardCustomerTypeFilter !== '' ? e($dashboardCustomerTypeFilter) : 'Todos' ?></span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
 
-            <label>
+                <div class="queue-status-dropdown" data-queue-customer-type-dropdown hidden>
+                    <label class="queue-status-option">
+                        <input type="radio" name="customer_type" value="" <?= $dashboardCustomerTypeFilter === '' ? 'checked' : '' ?> data-queue-customer-type-radio>
+                        <span>Todos</span>
+                    </label>
+                    <label class="queue-status-option">
+                        <input type="radio" name="customer_type" value="B2C" <?= $dashboardCustomerTypeFilter === 'B2C' ? 'checked' : '' ?> data-queue-customer-type-radio>
+                        <span>B2C</span>
+                    </label>
+                    <label class="queue-status-option">
+                        <input type="radio" name="customer_type" value="B2B" <?= $dashboardCustomerTypeFilter === 'B2B' ? 'checked' : '' ?> data-queue-customer-type-radio>
+                        <span>B2B</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="queue-status-filter dashboard-operation-filter reports-checklist-filter" data-reports-checklist-filter data-default-label="Todas">
                 <span>Opera&ccedil;&atilde;o</span>
-                <select name="operation">
-                    <option value="">Todas</option>
-                    <?php foreach ($dashboardOperations as $operation): ?>
-                        <option value="<?= e($operation) ?>" <?= $dashboardOperationFilter === $operation ? 'selected' : '' ?>>
-                            <?= e($operation) ?>
-                        </option>
+                <button type="button" class="queue-status-trigger" data-reports-checklist-trigger aria-expanded="false">
+                    <span data-reports-checklist-summary>Todas</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
+
+                <div class="queue-status-dropdown" data-reports-checklist-dropdown hidden>
+                    <?php foreach (($dashboardOperations ?? []) as $operation): ?>
+                        <label class="queue-status-option">
+                            <input type="checkbox" name="operation[]" value="<?= e($operation) ?>" data-reports-checklist-checkbox <?= in_array($operation, $dashboardOperationFilter ?? [], true) ? 'checked' : '' ?>>
+                            <span><?= e($operation) ?></span>
+                        </label>
                     <?php endforeach; ?>
-                </select>
-            </label>
+                </div>
+            </div>
+
+            <div class="queue-status-filter dashboard-base-group-filter reports-checklist-filter" data-reports-checklist-filter data-default-label="Todos">
+                <span>Base grupo</span>
+                <button type="button" class="queue-status-trigger" data-reports-checklist-trigger aria-expanded="false">
+                    <span data-reports-checklist-summary>Todos</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
+
+                <div class="queue-status-dropdown" data-reports-checklist-dropdown hidden>
+                    <?php foreach (($dashboardBaseGroups ?? []) as $baseGroup): ?>
+                        <label class="queue-status-option">
+                            <input type="checkbox" name="base_group[]" value="<?= e($baseGroup) ?>" data-reports-checklist-checkbox <?= in_array($baseGroup, $dashboardBaseGroupFilter ?? [], true) ? 'checked' : '' ?>>
+                            <span><?= e($baseGroup) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="queue-status-filter dashboard-coordinator-filter reports-checklist-filter" data-reports-checklist-filter data-default-label="Todos">
+                <span>Coordenador</span>
+                <button type="button" class="queue-status-trigger" data-reports-checklist-trigger aria-expanded="false">
+                    <span data-reports-checklist-summary>Todos</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
+
+                <div class="queue-status-dropdown" data-reports-checklist-dropdown hidden>
+                    <?php foreach (($dashboardCoordinators ?? []) as $coordinator): ?>
+                        <label class="queue-status-option">
+                            <input type="checkbox" name="coordinator[]" value="<?= e($coordinator) ?>" data-reports-checklist-checkbox <?= in_array($coordinator, $dashboardCoordinatorFilter ?? [], true) ? 'checked' : '' ?>>
+                            <span><?= e($coordinator) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
 
             <div class="form-actions-right">
                 <button type="submit" class="secondary-button">Filtrar</button>
@@ -143,8 +203,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
 <div
     id="dashboard-live-root"
     class="dashboard-live-root<?= $dashboardExecutiveMode ? ' is-executive' : '' ?>"
-    <?= $dashboardExecutiveMode ? 'data-dashboard-live data-dashboard-live-url="' . e($dashboardLiveUrl) . '" data-dashboard-live-interval="' . e((string) $executiveRefreshMs) . '"' : '' ?>
->
+    <?= $dashboardExecutiveMode ? 'data-dashboard-live data-dashboard-live-url="' . e($dashboardLiveUrl) . '" data-dashboard-live-interval="' . e((string) $executiveRefreshMs) . '"' : '' ?>>
     <?= view('dashboard/_live', [
         'stats' => $stats,
         'recentBatches' => $recentBatches,

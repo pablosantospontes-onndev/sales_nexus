@@ -640,8 +640,9 @@ foreach ($groups as $group) {
             <button type="button" class="ghost-button small-button" data-close-hierarchy-export-modal>Fechar</button>
         </div>
 
-        <form method="get" action="<?= e(url('hierarchy/export')) ?>" class="form-grid">
+        <form method="get" action="<?= e(url('hierarchy/export')) ?>" class="form-grid" data-hierarchy-export-form>
             <input type="hidden" name="route" value="hierarchy/export">
+            <input type="hidden" name="download_mode" value="" data-hierarchy-export-mode-input>
             <?php if ($sellerTermFilter !== ''): ?>
                 <input type="hidden" name="term" value="<?= e($sellerTermFilter) ?>">
             <?php endif; ?>
@@ -670,7 +671,7 @@ foreach ($groups as $group) {
 
             <div class="form-actions">
                 <span class="muted">O download respeita os filtros atuais e o per&iacute;odo selecionado.</span>
-                <button type="submit" class="success-button product-download-button">
+                <button type="button" class="success-button product-download-button" data-open-hierarchy-export-mode>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M14 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l-4-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
                         <path d="M14 2v6h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
@@ -680,6 +681,50 @@ foreach ($groups as $group) {
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal-shell" data-hierarchy-export-mode-modal hidden>
+    <div class="modal-backdrop" data-close-hierarchy-export-mode-modal></div>
+    <div class="modal-card hierarchy-export-mode-modal-card" role="dialog" aria-modal="true" aria-labelledby="hierarchy-export-mode-title">
+        <div class="section-header">
+            <div>
+                <p class="eyebrow">Download XLSX</p>
+                <h4 id="hierarchy-export-mode-title">Como deseja baixar o headcount?</h4>
+            </div>
+            <button type="button" class="ghost-button small-button" data-close-hierarchy-export-mode-modal>Fechar</button>
+        </div>
+
+        <p class="muted">
+            Se escolher editar, o headcount ser&aacute; marcado como em uso. Para apenas consultar, o download ocorre normalmente sem bloquear edi&ccedil;&otilde;es.
+        </p>
+
+        <div class="hierarchy-export-mode-grid" data-hierarchy-export-mode-grid>
+            <button
+                type="button"
+                class="hierarchy-export-mode-card is-selected"
+                data-hierarchy-export-card="view"
+            >
+                <span class="eyebrow">Consulta</span>
+                <strong>Apenas consultar</strong>
+                <small>Baixa o XLSX sem bloquear edi&ccedil;&otilde;es.</small>
+            </button>
+            <button
+                type="button"
+                class="hierarchy-export-mode-card"
+                data-hierarchy-export-card="edit"
+            >
+                <span class="eyebrow">Edi&ccedil;&atilde;o</span>
+                <strong>Baixar para editar</strong>
+                <small>Marca o headcount como em uso.</small>
+            </button>
+        </div>
+
+        <div class="form-actions">
+            <div class="form-actions-right">
+                <button type="button" class="primary-button" data-hierarchy-export-confirm>Baixar XLSX</button>
+            </div>
+        </div>
     </div>
 </div>
 

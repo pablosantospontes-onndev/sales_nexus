@@ -707,10 +707,15 @@ function setupOperationsManager() {
 
 function setupHierarchyExportModal() {
     const modal = document.querySelector('[data-hierarchy-export-modal]');
+    const modeModal = document.querySelector('[data-hierarchy-export-mode-modal]');
 
     if (!(modal instanceof HTMLElement)) {
         return;
     }
+
+    const exportForm = modal.querySelector('[data-hierarchy-export-form]');
+    const modeInput = modal.querySelector('[data-hierarchy-export-mode-input]');
+    const openModeButton = modal.querySelector('[data-open-hierarchy-export-mode]');
 
     function openModal() {
         modal.hidden = false;
@@ -719,11 +724,19 @@ function setupHierarchyExportModal() {
 
     function closeModal() {
         modal.hidden = true;
-        body.classList.remove('modal-open');
+        syncBodyModalState();
     }
 
     if (!modal.hidden) {
         body.classList.add('modal-open');
+    }
+
+    function syncBodyModalState() {
+        const hasOpenModal = Array.from(document.querySelectorAll('.modal-shell')).some((shell) => {
+            return shell instanceof HTMLElement && !shell.hidden;
+        });
+
+        body.classList.toggle('modal-open', hasOpenModal);
     }
 
     document.querySelectorAll('[data-open-hierarchy-export-modal]').forEach((button) => {
@@ -734,9 +747,85 @@ function setupHierarchyExportModal() {
         button.addEventListener('click', closeModal);
     });
 
+    if (openModeButton instanceof HTMLButtonElement && modeModal instanceof HTMLElement) {
+        openModeButton.addEventListener('click', () => {
+            if (!(exportForm instanceof HTMLFormElement)) {
+                return;
+            }
+
+            if (typeof exportForm.reportValidity === 'function' && !exportForm.reportValidity()) {
+                return;
+            }
+
+            modal.hidden = true;
+            modeModal.hidden = false;
+            syncBodyModalState();
+        });
+    }
+
+    if (modeModal instanceof HTMLElement) {
+        const closeButtons = modeModal.querySelectorAll('[data-close-hierarchy-export-mode-modal]');
+        const modeCards = modeModal.querySelectorAll('[data-hierarchy-export-card]');
+        const confirmButton = modeModal.querySelector('[data-hierarchy-export-confirm]');
+
+        const closeModeModal = () => {
+            modeModal.hidden = true;
+            modal.hidden = false;
+            syncBodyModalState();
+        };
+
+        closeButtons.forEach((button) => {
+            button.addEventListener('click', closeModeModal);
+        });
+
+        function selectMode(value) {
+            if (!(modeInput instanceof HTMLInputElement)) {
+                return;
+            }
+
+            modeInput.value = value;
+
+            modeCards.forEach((card) => {
+                if (!(card instanceof HTMLElement)) {
+                    return;
+                }
+
+                const isSelected = card.getAttribute('data-hierarchy-export-card') === value;
+                card.classList.toggle('is-selected', isSelected);
+            });
+        }
+
+        selectMode(modeInput instanceof HTMLInputElement && modeInput.value ? modeInput.value : 'view');
+
+        modeCards.forEach((card) => {
+            card.addEventListener('click', () => {
+                const value = card.getAttribute('data-hierarchy-export-card') || 'view';
+                selectMode(value);
+            });
+        });
+
+        if (confirmButton instanceof HTMLButtonElement) {
+            confirmButton.addEventListener('click', () => {
+                if (!(exportForm instanceof HTMLFormElement)) {
+                    return;
+                }
+
+                modeModal.hidden = true;
+                syncBodyModalState();
+                exportForm.submit();
+            });
+        }
+    }
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !modal.hidden) {
             closeModal();
+        }
+
+        if (event.key === 'Escape' && modeModal instanceof HTMLElement && !modeModal.hidden) {
+            modeModal.hidden = true;
+            modal.hidden = false;
+            syncBodyModalState();
         }
     });
 }
@@ -919,10 +1008,32 @@ function setupQueuePrioritizeModal() {
     }
 
     const prioritizeButton = modal.querySelector('[data-queue-prioritize-action]');
+    const dismissUrl = modal.getAttribute('data-queue-prioritize-dismiss-url');
+    const dismissToken = modal.getAttribute('data-queue-prioritize-token');
 
     function closeModal() {
         modal.hidden = true;
         body.classList.remove('modal-open');
+    }
+
+    async function markDismissed() {
+        if (!dismissUrl || !dismissToken) {
+            return;
+        }
+
+        try {
+            await fetch(dismissUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new URLSearchParams({ _token: dismissToken }).toString(),
+                keepalive: true,
+            });
+        } catch (error) {
+            // Silent fallback; modal still closes locally.
+        }
     }
 
     if (!modal.hidden) {
@@ -930,12 +1041,16 @@ function setupQueuePrioritizeModal() {
     }
 
     modal.querySelectorAll('[data-close-queue-prioritize-modal]').forEach((button) => {
-        button.addEventListener('click', closeModal);
+        button.addEventListener('click', async () => {
+            await markDismissed();
+            closeModal();
+        });
     });
 
     if (prioritizeButton instanceof HTMLElement) {
-        prioritizeButton.addEventListener('click', () => {
+        prioritizeButton.addEventListener('click', async () => {
             const targetUrl = prioritizeButton.getAttribute('data-queue-prioritize-url');
+            await markDismissed();
             closeModal();
 
             if (targetUrl) {

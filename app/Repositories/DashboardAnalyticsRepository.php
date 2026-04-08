@@ -14,25 +14,37 @@ final class DashboardAnalyticsRepository
         ?string $customerType = null,
         ?string $dateFrom = null,
         ?string $dateTo = null,
-        ?string $operationName = null,
+        ?array $operationNames = null,
+        ?array $baseGroups = null,
+        ?array $coordinators = null,
         ?array $visibilityScope = null
     ): array {
-        return $this->fetchKpis($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        return $this->fetchKpis(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
     }
 
     public function executiveOverview(
         ?string $customerType = null,
         ?string $dateFrom = null,
         ?string $dateTo = null,
-        ?string $operationName = null,
+        ?array $operationNames = null,
+        ?array $baseGroups = null,
+        ?array $coordinators = null,
         ?array $visibilityScope = null
     ): array {
-        $kpis = $this->fetchKpis($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
-        $hourlyPeaks = $this->fetchHourlyPeaks($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
-        $topBackoffices = $this->fetchTopBackoffices($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
-        $topOperations = $this->fetchTopOperations($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
-        $slowestBackoffices = $this->fetchSlowestBackoffices($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
-        $latestFinalizations = $this->fetchLatestFinalizations($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        $kpis = $this->fetchKpis($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
+        $hourlyPeaks = $this->fetchHourlyPeaks($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
+        $topBackoffices = $this->fetchTopBackoffices($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
+        $topOperations = $this->fetchTopOperations($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
+        $slowestBackoffices = $this->fetchSlowestBackoffices($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
+        $latestFinalizations = $this->fetchLatestFinalizations($customerType, $dateFrom, $dateTo, $operationNames, $baseGroups, $coordinators, $visibilityScope);
 
         $peakHour = null;
         foreach ($hourlyPeaks as $hourData) {
@@ -63,10 +75,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 COUNT(*) AS finalized_sales,
@@ -96,10 +118,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 HOUR(finalized_at) AS hour_number,
@@ -141,10 +173,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 auditor_name,
@@ -178,10 +220,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 operation_name,
@@ -207,10 +259,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 auditor_name,
@@ -250,10 +312,20 @@ final class DashboardAnalyticsRepository
         ?string $customerType,
         ?string $dateFrom,
         ?string $dateTo,
-        ?string $operationName,
+        ?array $operationNames,
+        ?array $baseGroups,
+        ?array $coordinators,
         ?array $visibilityScope
     ): array {
-        [$subquerySql, $bindings] = $this->finalizedSalesSubquery($customerType, $dateFrom, $dateTo, $operationName, $visibilityScope);
+        [$subquerySql, $bindings] = $this->finalizedSalesSubquery(
+            $customerType,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroups,
+            $coordinators,
+            $visibilityScope
+        );
         $statement = Database::connection()->prepare(
             "SELECT
                 sale_code,
@@ -299,7 +371,9 @@ final class DashboardAnalyticsRepository
         ?string $customerType = null,
         ?string $dateFrom = null,
         ?string $dateTo = null,
-        ?string $operationName = null,
+        ?array $operationNames = null,
+        ?array $baseGroups = null,
+        ?array $coordinators = null,
         ?array $visibilityScope = null
     ): array {
         $sql = "SELECT
@@ -346,9 +420,55 @@ final class DashboardAnalyticsRepository
             $bindings['date_to'] = $dateTo;
         }
 
-        if ($operationName !== null && $operationName !== '') {
-            $sql .= " AND COALESCE(NULLIF(TRIM(s.CONSULTOR_BASE_NOME), ''), hb.name) = :operation_name";
-            $bindings['operation_name'] = $operationName;
+        $validOperations = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $operation): string => normalize_text((string) $operation),
+            $operationNames ?? []
+        )), static fn (string $operation): bool => $operation !== ''));
+
+        if ($validOperations !== []) {
+            $placeholders = [];
+
+            foreach ($validOperations as $index => $operationName) {
+                $key = 'operation_name_' . $index;
+                $placeholders[] = ':' . $key;
+                $bindings[$key] = $operationName;
+            }
+
+            $sql .= " AND COALESCE(NULLIF(TRIM(s.CONSULTOR_BASE_NOME), ''), hb.name) IN (" . implode(', ', $placeholders) . ')';
+        }
+
+        $validBaseGroups = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $baseGroup): string => normalize_text((string) $baseGroup),
+            $baseGroups ?? []
+        )), static fn (string $baseGroup): bool => $baseGroup !== ''));
+
+        if ($validBaseGroups !== []) {
+            $placeholders = [];
+
+            foreach ($validBaseGroups as $index => $baseGroupName) {
+                $key = 'base_group_' . $index;
+                $placeholders[] = ':' . $key;
+                $bindings[$key] = $baseGroupName;
+            }
+
+            $sql .= " AND COALESCE(NULLIF(TRIM(s.CONSULTOR_BASE_GRUPO), ''), hbg.name) IN (" . implode(', ', $placeholders) . ')';
+        }
+
+        $validCoordinators = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $coordinator): string => normalize_text((string) $coordinator),
+            $coordinators ?? []
+        )), static fn (string $coordinator): bool => $coordinator !== ''));
+
+        if ($validCoordinators !== []) {
+            $placeholders = [];
+
+            foreach ($validCoordinators as $index => $coordinatorName) {
+                $key = 'coordinator_' . $index;
+                $placeholders[] = ':' . $key;
+                $bindings[$key] = $coordinatorName;
+            }
+
+            $sql .= " AND COALESCE(NULLIF(TRIM(s.COORDENADOR_NOME), ''), sh.coordinator_name) IN (" . implode(', ', $placeholders) . ')';
         }
 
         [$visibilitySql, $visibilityBindings] = $this->buildVisibilityScopeFilters($visibilityScope);

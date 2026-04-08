@@ -27,6 +27,10 @@ use App\Services\ReportsExportService;
 
 $route = (string) ($_GET['route'] ?? (Auth::check() ? 'dashboard' : 'login'));
 
+if (strncmp($route, 'queue', 5) !== 0) {
+    unset($_SESSION['queue_prioritize_dismissed']);
+}
+
 if ($route === 'login') {
     if (Auth::check()) {
         redirect(Auth::mustChangePassword() ? 'force-password' : 'dashboard');
@@ -301,7 +305,9 @@ switch ($route) {
                 ]);
             }
 
-            if (preg_match('/^\d{6}$/', $headcountPeriod)) {
+            $downloadMode = normalize_text($_GET['download_mode'] ?? '');
+
+            if ($downloadMode === 'EDIT' && preg_match('/^\d{6}$/', $headcountPeriod)) {
                 $hierarchyRepository->registerHeadcountDownload((int) Auth::id(), $headcountPeriod);
             }
 
@@ -920,6 +926,18 @@ switch ($route) {
         redirect('queue', $queueContextParams);
         break;
 
+
+
+    case 'queue/dismiss-prioritize':
+        if (! is_post() || ! Csrf::verify($_POST['_token'] ?? null)) {
+            http_response_code(400);
+            echo json_encode(['success' => false], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $_SESSION['queue_prioritize_dismissed'] = true;
+        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
+        break;
 
     case 'queue/comment':
         if (! is_post() || ! Csrf::verify($_POST['_token'] ?? null)) {
@@ -1831,9 +1849,23 @@ function dateRangeLabel(?string $dateFrom = null, ?string $dateTo = null): strin
 
 function dashboardContextParamsFromRequest(): array
 {
+    $operationValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $operation): string => normalize_text((string) $operation),
+        (array) ($_GET['operation'] ?? [])
+    )), static fn(string $operation): bool => $operation !== ''));
+    $baseGroupValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $baseGroup): string => normalize_text((string) $baseGroup),
+        (array) ($_GET['base_group'] ?? [])
+    )), static fn(string $baseGroup): bool => $baseGroup !== ''));
+    $coordinatorValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $coordinator): string => normalize_text((string) $coordinator),
+        (array) ($_GET['coordinator'] ?? [])
+    )), static fn(string $coordinator): bool => $coordinator !== ''));
     return [
         'customer_type' => normalize_text($_GET['customer_type'] ?? '') !== '' ? normalize_text($_GET['customer_type'] ?? '') : null,
-        'operation' => normalize_text($_GET['operation'] ?? '') !== '' ? normalize_text($_GET['operation'] ?? '') : null,
+        'operation' => $operationValues !== [] ? $operationValues : null,
+        'base_group' => $baseGroupValues !== [] ? $baseGroupValues : null,
+        'coordinator' => $coordinatorValues !== [] ? $coordinatorValues : null,
         'date_from' => normalize_date_to_db($_GET['date_from'] ?? null),
         'date_to' => normalize_date_to_db($_GET['date_to'] ?? null),
         'executive' => (int) ($_GET['executive'] ?? 0) === 1 ? 1 : null,
@@ -1848,7 +1880,9 @@ function dashboardViewData(
     $regionalScope = currentUserQueueScope();
     $dashboardContext = dashboardContextParamsFromRequest();
     $customerTypeFilter = (string) ($dashboardContext['customer_type'] ?? '');
-    $operationFilter = (string) ($dashboardContext['operation'] ?? '');
+    $operationFilter = (array) ($dashboardContext['operation'] ?? []);
+    $baseGroupFilter = (array) ($dashboardContext['base_group'] ?? []);
+    $coordinatorFilter = (array) ($dashboardContext['coordinator'] ?? []);
     $rawDateFromFilter = $dashboardContext['date_from'];
     $rawDateToFilter = $dashboardContext['date_to'];
     $dashboardExecutiveAllowed = Auth::hasRole('ADMINISTRADOR', 'BACKOFFICE SUPERVISOR');
@@ -1868,24 +1902,55 @@ function dashboardViewData(
     }
 
     $operations = $queueRepository->dashboardOperations($regionalScope);
+    $baseGroups = $queueRepository->dashboardBaseGroups($regionalScope);
+    $coordinators = $queueRepository->dashboardCoordinators($regionalScope);
 
-    if ($operationFilter !== '' && ! in_array($operationFilter, $operations, true)) {
-        $operations[] = $operationFilter;
+    foreach ($operationFilter as $selectedOperation) {
+        if (! in_array($selectedOperation, $operations, true)) {
+            $operations[] = $selectedOperation;
+        }
+    }
+
+    foreach ($baseGroupFilter as $selectedBaseGroup) {
+        if (! in_array($selectedBaseGroup, $baseGroups, true)) {
+            $baseGroups[] = $selectedBaseGroup;
+        }
+    }
+
+    foreach ($coordinatorFilter as $selectedCoordinator) {
+        if (! in_array($selectedCoordinator, $coordinators, true)) {
+            $coordinators[] = $selectedCoordinator;
+        }
+    }
+
+    if ($operations !== []) {
         sort($operations);
+    }
+
+    if ($baseGroups !== []) {
+        sort($baseGroups);
+    }
+
+    if ($coordinators !== []) {
+        sort($coordinators);
     }
 
     $dashboardStats = $queueRepository->dashboardStats(
         $customerTypeFilter !== '' ? $customerTypeFilter : null,
         $dateFromFilter,
         $dateToFilter,
-        $operationFilter !== '' ? $operationFilter : null,
+        $operationFilter !== [] ? $operationFilter : null,
+        $baseGroupFilter !== [] ? $baseGroupFilter : null,
+        $coordinatorFilter !== [] ? $coordinatorFilter : null,
         $regionalScope
     );
     $dashboardSalesKpis = $dashboardAnalyticsRepository->kpisOverview(
         $customerTypeFilter !== '' ? $customerTypeFilter : null,
         $dateFromFilter,
         $dateToFilter,
-        $operationFilter !== '' ? $operationFilter : null,
+        $operationFilter !== [] ? $operationFilter : null,
+        $baseGroupFilter !== [] ? $baseGroupFilter : null,
+        $coordinatorFilter !== [] ? $coordinatorFilter : null,
         $regionalScope
     );
 
@@ -1894,7 +1959,9 @@ function dashboardViewData(
             $customerTypeFilter !== '' ? $customerTypeFilter : null,
             $dateFromFilter,
             $dateToFilter,
-            $operationFilter !== '' ? $operationFilter : null,
+            $operationFilter !== [] ? $operationFilter : null,
+            $baseGroupFilter !== [] ? $baseGroupFilter : null,
+            $coordinatorFilter !== [] ? $coordinatorFilter : null,
             $regionalScope
         )
         : null;
@@ -1906,11 +1973,19 @@ function dashboardViewData(
         'recentBatches' => $batchRepository->recent(5),
         'dashboardCustomerTypeFilter' => $customerTypeFilter,
         'dashboardOperationFilter' => $operationFilter,
+        'dashboardBaseGroupFilter' => $baseGroupFilter,
+        'dashboardCoordinatorFilter' => $coordinatorFilter,
         'dashboardDateFromFilter' => $dateFromFilter,
         'dashboardDateToFilter' => $dateToFilter,
         'dashboardDateRangeLabel' => dateRangeLabel($dateFromFilter, $dateToFilter),
-        'dashboardFiltersOpen' => $customerTypeFilter !== '' || $operationFilter !== '' || $hasExplicitDateFilter,
+        'dashboardFiltersOpen' => $customerTypeFilter !== ''
+            || $operationFilter !== []
+            || $baseGroupFilter !== []
+            || $coordinatorFilter !== []
+            || $hasExplicitDateFilter,
         'dashboardOperations' => $operations,
+        'dashboardBaseGroups' => $baseGroups,
+        'dashboardCoordinators' => $coordinators,
         'dashboardExecutiveAllowed' => $dashboardExecutiveAllowed,
         'dashboardExecutiveMode' => $dashboardExecutiveMode,
         'dashboardExecutiveData' => $dashboardExecutiveData,
@@ -1995,9 +2070,10 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
     $prioritizeDateFrom = $pendingPriorCount > 0
         ? $queueRepository->oldestPendingBeforeDate($today, $regionalScope)
         : null;
+    $prioritizeDismissed = (bool) ($_SESSION['queue_prioritize_dismissed'] ?? false);
     $hasPendingFilter = in_array('PENDENTE INPUT', $statusFilter, true);
     $hasOlderDateTo = $dateToFilter !== null && $dateToFilter < $today;
-    $showPrioritizeModal = $pendingPriorCount > 0 && ! ($hasPendingFilter && $hasOlderDateTo);
+    $showPrioritizeModal = $pendingPriorCount > 0 && ! ($hasPendingFilter && $hasOlderDateTo) && ! $prioritizeDismissed;
 
     $pageNumber = max(1, (int) ($_GET['page'] ?? 1));
     $queueResult = $queueRepository->search(
