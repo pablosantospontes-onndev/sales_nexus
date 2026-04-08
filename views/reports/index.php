@@ -97,7 +97,7 @@ $reportsMonths = [
         </div>
     </div>
 
-    <form method="get" action="index.php" class="reports-filters-form">
+    <form method="get" action="index.php" class="reports-filters-form" data-auto-submit-form>
         <input type="hidden" name="route" value="reports">
         <div class="reports-filter-layout">
             <section class="reports-calendar-panel">
@@ -156,7 +156,7 @@ $reportsMonths = [
                 </div>
             </section>
 
-            <section class="reports-filter-grid">
+            <section class="reports-filter-grid reports-filter-grid-report">
                 <div class="queue-status-filter reports-checklist-filter" data-reports-checklist-filter data-default-label="Todos">
                     <span>Status</span>
                     <button type="button" class="queue-status-trigger" data-reports-checklist-trigger aria-expanded="false">

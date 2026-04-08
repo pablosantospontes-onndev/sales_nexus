@@ -1641,55 +1641,56 @@ function setupReportsTableExports() {
 }
 
 function setupReportsAutoSubmit() {
-    const form = document.querySelector('.reports-filters-form');
-    if (!(form instanceof HTMLFormElement)) {
-        return;
-    }
+    document.querySelectorAll('[data-auto-submit-form]').forEach((form) => {
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
 
-    let submitTimeout = null;
-    let lastSerialized = new URLSearchParams(new FormData(form)).toString();
+        let submitTimeout = null;
+        let lastSerialized = new URLSearchParams(new FormData(form)).toString();
 
-    function scheduleSubmit(delay = 350) {
-        window.clearTimeout(submitTimeout);
-        submitTimeout = window.setTimeout(() => {
-            const serialized = new URLSearchParams(new FormData(form)).toString();
-            if (serialized === lastSerialized) {
+        function scheduleSubmit(delay = 350) {
+            window.clearTimeout(submitTimeout);
+            submitTimeout = window.setTimeout(() => {
+                const serialized = new URLSearchParams(new FormData(form)).toString();
+                if (serialized === lastSerialized) {
+                    return;
+                }
+                lastSerialized = serialized;
+                form.submit();
+            }, delay);
+        }
+
+        form.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
                 return;
             }
-            lastSerialized = serialized;
-            form.submit();
-        }, delay);
-    }
-
-    form.addEventListener('change', (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
-            return;
-        }
-        if (target.type === 'text') {
-            return;
-        }
-        scheduleSubmit(250);
-    });
-
-    form.querySelectorAll('input[type="text"]').forEach((input) => {
-        if (!(input instanceof HTMLInputElement)) {
-            return;
-        }
-
-        input.addEventListener('input', () => {
-            scheduleSubmit(500);
-        });
-
-        input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                scheduleSubmit(0);
+            if (target.type === 'text') {
+                return;
             }
+            scheduleSubmit(250);
         });
 
-        input.addEventListener('blur', () => {
-            scheduleSubmit(0);
+        form.querySelectorAll('input[type="text"]').forEach((input) => {
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+
+            input.addEventListener('input', () => {
+                scheduleSubmit(500);
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    scheduleSubmit(0);
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                scheduleSubmit(0);
+            });
         });
     });
 }

@@ -6,8 +6,9 @@ if (str_contains($pageTitle, 'Usu') && str_contains($pageTitle, 'rios') && str_c
 }
 $sidebarIcons = [
     'dashboard' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.75 4.75h6.75v6.75H4.75Zm7.75 0h6.75v9.75H12.5Zm-7.75 7.75h6.75v6.75H4.75Zm7.75 2.25h6.75v4.5H12.5Z"/></svg>',
-    'import' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11.25 4.5h1.5v8.69l2.72-2.72 1.06 1.06L12 16.06l-4.53-4.53 1.06-1.06 2.72 2.72ZM5.25 18h13.5v1.5H5.25Z"/></svg>',
+    'import' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11.25 19.5h1.5V10.81l2.72 2.72 1.06-1.06L12 7.94l-4.53 4.53 1.06 1.06 2.72-2.72ZM5.25 18h13.5v1.5H5.25Z"/></svg>',
     'queue' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5.25 5.25h13.5v3H5.25Zm0 5.25h13.5v3H5.25Zm0 5.25h13.5v3H5.25Z"/></svg>',
+    'post_sales' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5h8a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 4.5h5a1 1 0 0 1 1 1v1.5h-7V5.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m9.5 12 1.75 1.75 3.25-3.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     'reports' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5.25 18.75h13.5M7.5 15.75V10.5M12 15.75V6.75M16.5 15.75v-3.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     'users' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 12a3.75 3.75 0 1 0-3.75-3.75A3.75 3.75 0 0 0 12 12Zm-6.75 7.5a6.75 6.75 0 0 1 13.5 0h-1.5a5.25 5.25 0 0 0-10.5 0Zm11.45-8.43a3 3 0 1 0-1.53-5.58 5.38 5.38 0 0 1 0 4.71 3 3 0 0 0 1.53.87Z"/></svg>',
     'products' => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3.82 7.5 3.75v8.86L12 20.18l-7.5-3.75V7.57Zm0 1.68L6.2 8.4 12 11.3l5.8-2.9ZM5.25 9.62v5.89l6 3v-5.89Zm13.5 0-6 3v5.89l6-3Z"/></svg>',
@@ -36,6 +37,12 @@ $sidebarNavItems = [
 ];
 
 if (($authUser['role'] ?? '') === 'ADMINISTRADOR') {
+    $sidebarNavItems[] = [
+        'href' => url('post-sales'),
+        'label' => html_entity_decode('P&oacute;s Venda', ENT_QUOTES, 'UTF-8'),
+        'icon' => 'post_sales',
+        'active' => str_starts_with(current_route(), 'post-sales'),
+    ];
     $sidebarNavItems[] = [
         'href' => url('reports'),
         'label' => 'Relatórios',

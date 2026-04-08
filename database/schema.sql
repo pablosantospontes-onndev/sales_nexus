@@ -219,6 +219,22 @@ CREATE TABLE IF NOT EXISTS sale_logs (
     CONSTRAINT fk_sale_logs_user FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS post_sales_update_logs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED DEFAULT NULL,
+    original_filename VARCHAR(255) DEFAULT NULL,
+    total_rows INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_rows INT UNSIGNED NOT NULL DEFAULT 0,
+    skipped_rows INT UNSIGNED NOT NULL DEFAULT 0,
+    not_found_rows INT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('SUCESSO', 'FALHA') NOT NULL DEFAULT 'SUCESSO',
+    message VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_post_sales_update_logs_user (user_id),
+    CONSTRAINT fk_post_sales_update_logs_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE IF NOT EXISTS sales_nexus (
     ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     IMPORT_QUEUE_ID BIGINT UNSIGNED NOT NULL,

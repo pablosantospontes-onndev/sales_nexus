@@ -11,6 +11,8 @@ use App\Repositories\HierarchyRepository;
 use App\Repositories\ImportBatchRepository;
 use App\Repositories\ImportQueueRepository;
 use App\Repositories\ProductRepository;
+use App\Repositories\PostSaleLogRepository;
+use App\Repositories\PostSaleRepository;
 use App\Repositories\ReportsRepository;
 use App\Repositories\SaleLogRepository;
 use App\Repositories\SalesRepository;
@@ -20,6 +22,7 @@ use App\Services\HierarchyImportService;
 use App\Services\ImportService;
 use App\Services\ProductCatalogExportService;
 use App\Services\ProductCatalogImportService;
+use App\Services\PostSaleImportService;
 use App\Services\ReportsExportService;
 
 $route = (string) ($_GET['route'] ?? (Auth::check() ? 'dashboard' : 'login'));
@@ -146,6 +149,7 @@ if (
     || str_starts_with($route, 'users')
     || str_starts_with($route, 'products')
     || str_starts_with($route, 'reports')
+    || str_starts_with($route, 'post-sales')
 ) {
     Auth::requireRole('ADMINISTRADOR');
 }
@@ -154,6 +158,8 @@ $queueRepository = new ImportQueueRepository();
 $batchRepository = new ImportBatchRepository();
 $dashboardAnalyticsRepository = new DashboardAnalyticsRepository();
 $productRepository = new ProductRepository();
+$postSaleRepository = new PostSaleRepository();
+$postSaleLogRepository = new PostSaleLogRepository();
 $reportsRepository = new ReportsRepository();
 $saleLogRepository = new SaleLogRepository();
 $userRepository = new UserRepository();
@@ -534,6 +540,71 @@ switch ($route) {
     case 'reports':
         render('reports/index', reportsViewData($reportsRepository) + [
             'title' => html_entity_decode('Relat&oacute;rios', ENT_QUOTES, 'UTF-8'),
+        ]);
+        break;
+
+    case 'post-sales':
+        if (is_post()) {
+            if (! Csrf::verify($_POST['_token'] ?? null)) {
+                flash('error', 'Token de segurança inválido.');
+                redirect('post-sales');
+            }
+
+            $originalFilename = (string) ($_FILES['xlsx_file']['name'] ?? '');
+
+            try {
+                $result = (new PostSaleImportService())->importFromXlsx($_FILES['xlsx_file'] ?? []);
+
+                $postSaleLogRepository->create([
+                    'user_id' => (int) Auth::id(),
+                    'original_filename' => $originalFilename,
+                    'total_rows' => $result['total_rows'] ?? 0,
+                    'updated_rows' => $result['updated_rows'] ?? 0,
+                    'skipped_rows' => $result['skipped_rows'] ?? 0,
+                    'not_found_rows' => $result['not_found_rows'] ?? 0,
+                    'status' => 'SUCESSO',
+                    'message' => $result['message'] ?? 'Importação concluída.',
+                ]);
+
+                flash(
+                    'success',
+                    sprintf(
+                        'Pós-venda atualizado. Total lido: %d | Atualizados: %d | Ignorados: %d | Não encontrados: %d',
+                        (int) ($result['total_rows'] ?? 0),
+                        (int) ($result['updated_rows'] ?? 0),
+                        (int) ($result['skipped_rows'] ?? 0),
+                        (int) ($result['not_found_rows'] ?? 0)
+                    )
+                );
+            } catch (Throwable $throwable) {
+                $postSaleLogRepository->create([
+                    'user_id' => (int) Auth::id(),
+                    'original_filename' => $originalFilename,
+                    'status' => 'FALHA',
+                    'message' => $throwable->getMessage(),
+                ]);
+
+                flash('error', $throwable->getMessage());
+            }
+
+            redirect('post-sales');
+        }
+
+        $filters = postSalesFiltersState($postSaleRepository);
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $detailed = $postSaleRepository->detailed($filters, $page, 50);
+
+        render('post_sales/index', [
+            'title' => 'Pós Venda',
+            'postSalesFilters' => $filters,
+            'postSalesPeriods' => $postSaleRepository->availablePeriods(),
+            'postSalesRows' => $detailed['items'],
+            'postSalesPage' => $detailed['page'],
+            'postSalesPerPage' => $detailed['per_page'],
+            'postSalesTotal' => $detailed['total'],
+            'postSalesTotalPages' => $detailed['total_pages'],
+            'postSalesQueryParams' => postSalesQueryParams($filters),
+            'postSalesLogs' => $postSaleLogRepository->latest(10),
         ]);
         break;
 
@@ -1987,6 +2058,67 @@ function userRegionalViewLabel(array $user): string
         : 'PERSONALIZADO';
 }
 
+function postSalesDefaultFilters(PostSaleRepository $postSaleRepository): array
+{
+    $latestPeriod = $postSaleRepository->latestPeriod();
+
+    return [
+        'period' => $latestPeriod,
+        'term' => '',
+    ];
+}
+
+function postSalesHasRequestFilters(array $source): bool
+{
+    foreach (['period', 'term', 'apply', 'clear'] as $key) {
+        if (array_key_exists($key, $source)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function postSalesNormalizeFilters(array $source, PostSaleRepository $postSaleRepository): array
+{
+    $defaults = postSalesDefaultFilters($postSaleRepository);
+    $availablePeriods = $postSaleRepository->availablePeriods();
+    $period = trim((string) ($source['period'] ?? $defaults['period'] ?? ''));
+
+    if ($period !== '' && ! in_array($period, $availablePeriods, true)) {
+        $period = $defaults['period'] ?? '';
+    }
+
+    return [
+        'period' => $period,
+        'term' => substr(trim((string) ($source['term'] ?? $defaults['term'] ?? '')), 0, 120),
+    ];
+}
+
+function postSalesFiltersState(PostSaleRepository $postSaleRepository): array
+{
+    $sessionKey = 'post_sales_filters';
+
+    if ((int) ($_GET['clear'] ?? 0) === 1) {
+        $_SESSION[$sessionKey] = postSalesDefaultFilters($postSaleRepository);
+    } elseif (postSalesHasRequestFilters($_GET)) {
+        $_SESSION[$sessionKey] = postSalesNormalizeFilters($_GET, $postSaleRepository);
+    } elseif (! isset($_SESSION[$sessionKey]) || ! is_array($_SESSION[$sessionKey])) {
+        $_SESSION[$sessionKey] = postSalesDefaultFilters($postSaleRepository);
+    }
+
+    return postSalesNormalizeFilters((array) $_SESSION[$sessionKey], $postSaleRepository);
+}
+
+function postSalesQueryParams(array $filters, ?int $page = null): array
+{
+    return array_filter([
+        'period' => $filters['period'] ?? null,
+        'term' => $filters['term'] ?? null,
+        'page' => $page,
+    ], static fn(mixed $value): bool => $value !== null && $value !== '' && $value !== []);
+}
+
 function reportsDefaultFilters(ReportsRepository $reportsRepository): array
 {
     $today = new DateTimeImmutable('today');
@@ -2233,9 +2365,9 @@ function reportsAutoSelectFilters(array $filters, array $options): array
         }
 
         $available = array_values(array_filter(array_map(
-            static fn (mixed $value): string => trim((string) $value),
+            static fn(mixed $value): string => trim((string) $value),
             (array) ($options[$optionKey] ?? [])
-        ), static fn (string $value): bool => $value !== ''));
+        ), static fn(string $value): bool => $value !== ''));
 
         if (count($available) === 1) {
             $filters[$filterKey] = [$available[0]];
