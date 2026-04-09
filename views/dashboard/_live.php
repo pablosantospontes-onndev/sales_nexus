@@ -14,6 +14,14 @@ $maxHourlySales = max(1, ...array_map(static fn (array $row): int => (int) ($row
 $maxBackofficeSales = max(1, ...array_map(static fn (array $row): int => (int) ($row['finalized_sales'] ?? 0), $topBackoffices ?: [['finalized_sales' => 0]]));
 $maxOperationSales = max(1, ...array_map(static fn (array $row): int => (int) ($row['finalized_sales'] ?? 0), $topOperations ?: [['finalized_sales' => 0]]));
 $maxSlowMinutes = max(1, ...array_map(static fn (array $row): int => (int) ($row['average_minutes'] ?? 0), $slowestBackoffices ?: [['average_minutes' => 0]]));
+$finalizedComparison = is_array($finalizedComparison ?? null) ? $finalizedComparison : [];
+$finalizedDays = $finalizedComparison['days'] ?? [];
+$currentPeriodStart = $finalizedComparison['current_start'] ?? null;
+$currentPeriodEnd = $finalizedComparison['current_end'] ?? null;
+$previousPeriodStart = $finalizedComparison['previous_start'] ?? null;
+$previousPeriodEnd = $finalizedComparison['previous_end'] ?? null;
+$currentMonthLabel = $finalizedComparison['current_month_label'] ?? '';
+$previousMonthLabel = $finalizedComparison['previous_month_label'] ?? '';
 ?>
 
 <section class="stats-grid">
@@ -263,45 +271,102 @@ $maxSlowMinutes = max(1, ...array_map(static fn (array $row): int => (int) ($row
         </section>
     </section>
 <?php else: ?>
-    <section class="panel">
-        <div class="panel-head">
-            <p class="eyebrow">&Uacute;ltimas importa&ccedil;&otilde;es</p>
-            <h3>Hist&oacute;rico recente</h3>
+    <?php
+    $comparisonMax = 1;
+    $currentTotal = 0;
+    $previousTotal = 0;
+
+    foreach ($finalizedDays as $day) {
+        $currentCount = (int) ($day['current_count'] ?? 0);
+        $previousCount = (int) ($day['previous_count'] ?? 0);
+        $currentTotal += $currentCount;
+        $previousTotal += $previousCount;
+        $comparisonMax = max($comparisonMax, $currentCount, $previousCount);
+    }
+
+    $currentRangeLabel = $currentPeriodStart !== null && $currentPeriodEnd !== null
+        ? format_date_br($currentPeriodStart) . ' ate ' . format_date_br($currentPeriodEnd)
+        : 'Sem intervalo definido';
+    $previousRangeLabel = $previousPeriodStart !== null && $previousPeriodEnd !== null
+        ? format_date_br($previousPeriodStart) . ' ate ' . format_date_br($previousPeriodEnd)
+        : 'Sem intervalo definido';
+    $deltaValue = $currentTotal - $previousTotal;
+    $deltaPercent = $previousTotal > 0 ? (int) round(($deltaValue / $previousTotal) * 100) : null;
+    ?>
+
+    <section class="panel dashboard-weekly-panel">
+        <div class="weekly-comparison-head">
+            <div>
+                <p class="eyebrow">Comparativo mensal</p>
+                <h3>Finalizadas na semana atual do m&ecirc;s</h3>
+                <small class="muted">Atual: <?= e($currentRangeLabel) ?></small>
+                <small class="muted">M&ecirc;s anterior: <?= e($previousRangeLabel) ?></small>
+                <small class="muted">Domingos em vermelho</small>
+            </div>
+
+            <div class="weekly-comparison-totals">
+                <div class="weekly-comparison-total is-current">
+                    <small>Finalizadas (<?= e($currentMonthLabel) ?>)</small>
+                    <strong><?= e((string) $currentTotal) ?></strong>
+                </div>
+                <div class="weekly-comparison-total is-previous">
+                    <small>Mesmo per&iacute;odo (<?= e($previousMonthLabel) ?>)</small>
+                    <strong><?= e((string) $previousTotal) ?></strong>
+                    <?php if ($deltaPercent !== null): ?>
+                        <span class="weekly-comparison-delta<?= $deltaValue < 0 ? ' is-negative' : ' is-positive' ?>">
+                            <?= $deltaValue >= 0 ? '+' : '' ?><?= e((string) $deltaPercent) ?>%
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
-        <div class="table-wrap">
-            <table class="dashboard-history-table">
-                <thead>
-                <tr>
-                    <th>Arquivo</th>
-                    <th>Total</th>
-                    <th>Eleg&iacute;veis</th>
-                    <th>Novas</th>
-                    <th>Duplicadas</th>
-                    <th>Usu&aacute;rio</th>
-                    <th>Data</th>
-                </tr>
-                </thead>
-                <tbody>
-                <?php if ($recentBatches === []): ?>
-                    <tr>
-                        <td colspan="7" class="empty-state">Nenhuma importa&ccedil;&atilde;o registrada ainda.</td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($recentBatches as $batch): ?>
-                        <tr>
-                            <td><?= e($batch['original_filename']) ?></td>
-                            <td><?= e((string) $batch['total_rows']) ?></td>
-                            <td><?= e((string) $batch['eligible_rows']) ?></td>
-                            <td><?= e((string) $batch['imported_count']) ?></td>
-                            <td><?= e((string) $batch['duplicate_count']) ?></td>
-                            <td><?= e($batch['created_by_name'] ?? '-') ?></td>
-                            <td><?= e(format_datetime_br($batch['created_at'])) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
+        <div class="weekly-comparison-legend">
+            <span><i class="weekly-comparison-swatch is-current"></i><?= e($currentMonthLabel) ?></span>
+            <span><i class="weekly-comparison-swatch is-previous"></i><?= e($previousMonthLabel) ?></span>
+            <span><i class="weekly-comparison-swatch is-sunday"></i>Domingo</span>
         </div>
+
+        <?php if ($finalizedDays === []): ?>
+            <div class="empty-state">Nenhuma venda finalizada no per&iacute;odo selecionado.</div>
+        <?php else: ?>
+            <div class="weekly-comparison-chart">
+                <?php foreach ($finalizedDays as $day): ?>
+                    <?php
+                    $currentCount = (int) ($day['current_count'] ?? 0);
+                    $previousCount = (int) ($day['previous_count'] ?? 0);
+                    $currentHeight = $currentCount > 0 ? max(6, (int) round(($currentCount / $comparisonMax) * 100)) : 0;
+                    $previousHeight = $previousCount > 0 ? max(6, (int) round(($previousCount / $comparisonMax) * 100)) : 0;
+                    $currentIsSunday = (bool) ($day['current_is_sunday'] ?? false);
+                    $previousIsSunday = (bool) ($day['previous_is_sunday'] ?? false);
+                    $dayLabel = '-';
+                    try {
+                        $dayLabel = (new DateTimeImmutable((string) ($day['current_date'] ?? '')))->format('d/m');
+                    } catch (Throwable) {
+                        $dayLabel = (string) ($day['current_date'] ?? '-');
+                    }
+                    ?>
+                    <div class="weekly-comparison-day" data-ui-tooltip="<?= e($currentMonthLabel . ': ' . $currentCount . ' | ' . $previousMonthLabel . ': ' . $previousCount) ?>">
+                        <div class="weekly-comparison-card">
+                            <div class="weekly-comparison-metrics">
+                                <span class="weekly-comparison-metric is-current<?= $currentIsSunday ? ' is-sunday' : '' ?>">
+                                    <small>Atual</small>
+                                    <strong><?= e((string) $currentCount) ?></strong>
+                                </span>
+                                <span class="weekly-comparison-metric is-previous<?= $previousIsSunday ? ' is-sunday' : '' ?>">
+                                    <small>Anterior</small>
+                                    <strong><?= e((string) $previousCount) ?></strong>
+                                </span>
+                            </div>
+                            <div class="weekly-comparison-bars">
+                                <span class="weekly-comparison-bar is-current<?= $currentIsSunday ? ' is-sunday' : '' ?>" style="--bar-height: <?= e((string) $currentHeight) ?>"></span>
+                                <span class="weekly-comparison-bar is-previous<?= $previousIsSunday ? ' is-sunday' : '' ?>" style="--bar-height: <?= e((string) $previousHeight) ?>"></span>
+                            </div>
+                        </div>
+                        <small class="weekly-comparison-label<?= $currentIsSunday ? ' is-sunday' : '' ?>"><?= e($dayLabel) ?></small>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 <?php endif; ?>

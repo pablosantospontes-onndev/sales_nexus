@@ -3877,6 +3877,288 @@ html.theme-dark .queue-overview-copy small {
     font-size: 10px;
 }
 
+.weekly-comparison-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.weekly-comparison-head .muted {
+    font-size: 12px;
+}
+
+.weekly-comparison-legend {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin: 12px 0 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.weekly-comparison-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.weekly-comparison-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.weekly-comparison-swatch.is-current {
+    background: var(--accent);
+}
+
+.weekly-comparison-swatch.is-previous {
+    background: #4a6f94;
+}
+
+.weekly-comparison-swatch.is-sunday {
+    background: #d53939;
+}
+
+.weekly-comparison-totals {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.weekly-comparison-total {
+    text-align: right;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--paper-soft);
+    min-width: 150px;
+    box-shadow: var(--shadow-sm);
+}
+
+.weekly-comparison-total small {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.weekly-comparison-total strong {
+    font-size: 20px;
+    color: var(--title);
+}
+
+.weekly-comparison-total.is-current {
+    border-color: rgba(255, 202, 44, 0.5);
+}
+
+.weekly-comparison-total.is-previous {
+    border-color: rgba(74, 111, 148, 0.35);
+}
+
+.weekly-comparison-delta {
+    display: inline-flex;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(31, 122, 69, 0.1);
+    color: #1f7a45;
+}
+
+.weekly-comparison-delta.is-negative {
+    background: rgba(213, 57, 57, 0.12);
+    color: #d53939;
+}
+
+.weekly-comparison-chart {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+.weekly-comparison-day {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+}
+
+.weekly-comparison-card {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid #e3edf8;
+    background: linear-gradient(180deg, #fbfdff 0%, #eef4fb 100%);
+    padding: 12px 12px 10px;
+    display: grid;
+    gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.weekly-comparison-metrics {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.weekly-comparison-metric {
+    display: grid;
+    gap: 2px;
+    padding-left: 8px;
+    border-left: 3px solid transparent;
+}
+
+.weekly-comparison-metric small {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.weekly-comparison-metric strong {
+    font-size: 18px;
+    color: var(--title);
+    line-height: 1;
+}
+
+.weekly-comparison-metric.is-current {
+    border-color: var(--accent);
+}
+
+.weekly-comparison-metric.is-previous {
+    border-color: #4a6f94;
+}
+
+.weekly-comparison-metric.is-sunday {
+    border-color: var(--danger);
+}
+
+
+.weekly-comparison-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.weekly-comparison-label.is-sunday {
+    color: #d53939;
+}
+
+.weekly-comparison-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 10px;
+    height: 130px;
+    width: 100%;
+    padding: 12px 8px;
+    border-radius: 12px;
+    border: 1px dashed rgba(180, 198, 218, 0.6);
+    background:
+        repeating-linear-gradient(0deg, rgba(210, 223, 238, 0.4) 0, rgba(210, 223, 238, 0.4) 1px, transparent 1px, transparent 24px),
+        linear-gradient(180deg, #f6faff 0%, #edf3fb 100%);
+}
+
+.weekly-comparison-bar {
+    flex: 1;
+    max-width: 22px;
+    min-width: 10px;
+    height: calc(var(--bar-height, 0) * 1%);
+    border-radius: 12px 12px 8px 8px;
+    transition: height 0.2s ease;
+    box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.08);
+}
+
+.weekly-comparison-bar.is-current {
+    background: linear-gradient(180deg, #ffd860 0%, #ffbe2e 100%);
+}
+
+.weekly-comparison-bar.is-previous {
+    background: linear-gradient(180deg, #7da2c7 0%, #4a6f94 100%);
+}
+
+.weekly-comparison-bar.is-sunday {
+    background: linear-gradient(180deg, #ff7f93 0%, #d53939 100%);
+}
+
+html.theme-dark .weekly-comparison-bars {
+    border-color: rgba(51, 76, 112, 0.75);
+    background:
+        repeating-linear-gradient(0deg, rgba(39, 58, 84, 0.5) 0, rgba(39, 58, 84, 0.5) 1px, transparent 1px, transparent 24px),
+        linear-gradient(180deg, rgba(17, 27, 44, 0.9), rgba(12, 20, 34, 0.95));
+}
+
+html.theme-dark .weekly-comparison-bar.is-current {
+    background: linear-gradient(180deg, #4fe0ff 0%, #1ac8e8 100%);
+}
+
+html.theme-dark .weekly-comparison-bar.is-previous {
+    background: linear-gradient(180deg, #8fb7ea 0%, #5e89c6 100%);
+}
+
+html.theme-dark .weekly-comparison-bar.is-sunday {
+    background: linear-gradient(180deg, #ff9fb2 0%, #f05b78 100%);
+}
+
+html.theme-dark .weekly-comparison-sunday {
+    background: rgba(240, 91, 120, 0.18);
+    color: #f05b78;
+}
+
+html.theme-dark .weekly-comparison-card {
+    border-color: rgba(36, 57, 86, 0.8);
+    background: linear-gradient(180deg, rgba(15, 24, 40, 0.92), rgba(10, 18, 32, 0.96));
+}
+
+html.theme-dark .weekly-comparison-total {
+    background: rgba(12, 20, 34, 0.9);
+    border-color: rgba(36, 58, 88, 0.8);
+}
+
+html.theme-dark .weekly-comparison-delta {
+    background: rgba(83, 216, 178, 0.15);
+    color: #53d8b2;
+}
+
+html.theme-dark .weekly-comparison-delta.is-negative {
+    background: rgba(240, 91, 120, 0.18);
+    color: #f05b78;
+}
+
+@media (max-width: 980px) {
+    .weekly-comparison-chart {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .weekly-comparison-bars {
+        height: 120px;
+    }
+}
+
+@media (max-width: 720px) {
+    .weekly-comparison-chart {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .weekly-comparison-totals {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
 .queue-code-cell {
     white-space: nowrap;
 }

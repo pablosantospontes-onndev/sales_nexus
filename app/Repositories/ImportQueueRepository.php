@@ -60,6 +60,135 @@ final class ImportQueueRepository
         ];
     }
 
+    public function finalizedMonthComparison(
+        ?string $customerType = null,
+        ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $coordinatorNames = null,
+        ?array $visibilityScope = null,
+        ?string $referenceDate = null
+    ): array {
+        $referenceDate = $referenceDate !== null && $referenceDate !== '' ? $referenceDate : date('Y-m-d');
+        $reference = new \DateTimeImmutable($referenceDate);
+        $currentEnd = $reference;
+        $currentMonthStart = $reference->modify('first day of this month');
+        $currentStart = $reference->modify('-6 days');
+
+        if ($currentStart < $currentMonthStart) {
+            $currentStart = $currentMonthStart;
+        }
+
+        $length = $currentStart->diff($currentEnd)->days + 1;
+        $previousMonthStart = $reference->modify('first day of last month');
+        $previousMonthEnd = $previousMonthStart->modify('+' . ((int) $reference->format('j') - 1) . ' days');
+        $previousMonthLastDay = $previousMonthStart->modify('last day of this month');
+
+        if ($previousMonthEnd > $previousMonthLastDay) {
+            $previousMonthEnd = $previousMonthLastDay;
+        }
+
+        $previousStart = $previousMonthEnd->modify('-' . max(0, $length - 1) . ' days');
+
+        [$filtersSql, $bindings] = $this->buildDashboardFilters(
+            $customerType,
+            null,
+            null,
+            $operationNames,
+            $baseGroupNames,
+            $coordinatorNames,
+            $visibilityScope
+        );
+
+        $baseSql = "FROM sales_import_queue
+            LEFT JOIN seller_hierarchies
+                   ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                  AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, '%Y%m')
+            LEFT JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+            LEFT JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+            WHERE 1 = 1" . $filtersSql . "
+              AND sales_import_queue.audit_status = 'FINALIZADA'";
+
+        $currentBindings = [
+            'current_date_from' => $currentStart->format('Y-m-d'),
+            'current_date_to' => $currentEnd->format('Y-m-d'),
+        ];
+        $previousBindings = [
+            'previous_date_from' => $previousStart->format('Y-m-d'),
+            'previous_date_to' => $previousMonthEnd->format('Y-m-d'),
+        ];
+
+        $currentStatement = Database::connection()->prepare(
+            "SELECT DATE(sales_import_queue.finalized_at) AS ref_date, COUNT(*) AS total
+             {$baseSql}
+               AND sales_import_queue.finalized_at IS NOT NULL
+               AND DATE(sales_import_queue.finalized_at) BETWEEN :current_date_from AND :current_date_to
+             GROUP BY DATE(sales_import_queue.finalized_at)"
+        );
+        $currentStatement->execute($bindings + $currentBindings);
+        $currentRows = $currentStatement->fetchAll();
+
+        $previousStatement = Database::connection()->prepare(
+            "SELECT DATE(sales_import_queue.finalized_at) AS ref_date, COUNT(*) AS total
+             {$baseSql}
+               AND sales_import_queue.finalized_at IS NOT NULL
+               AND DATE(sales_import_queue.finalized_at) BETWEEN :previous_date_from AND :previous_date_to
+             GROUP BY DATE(sales_import_queue.finalized_at)"
+        );
+        $previousStatement->execute($bindings + $previousBindings);
+        $previousRows = $previousStatement->fetchAll();
+
+        $currentCounts = [];
+        foreach ($currentRows as $row) {
+            $dateKey = (string) ($row['ref_date'] ?? '');
+            if ($dateKey !== '') {
+                $currentCounts[$dateKey] = (int) ($row['total'] ?? 0);
+            }
+        }
+
+        $previousCounts = [];
+        foreach ($previousRows as $row) {
+            $dateKey = (string) ($row['ref_date'] ?? '');
+            if ($dateKey !== '') {
+                $previousCounts[$dateKey] = (int) ($row['total'] ?? 0);
+            }
+        }
+
+        $days = [];
+        $currentCursor = $currentStart;
+        $previousCursor = $previousStart;
+
+        while ($currentCursor <= $currentEnd) {
+            $currentIsSunday = (int) $currentCursor->format('w') === 0;
+            $previousIsSunday = (int) $previousCursor->format('w') === 0;
+            $currentKey = $currentCursor->format('Y-m-d');
+            $previousKey = $previousCursor->format('Y-m-d');
+
+            if (! ($currentIsSunday && $previousIsSunday)) {
+                $days[] = [
+                    'current_date' => $currentKey,
+                    'previous_date' => $previousKey,
+                    'current_count' => (int) ($currentCounts[$currentKey] ?? 0),
+                    'previous_count' => (int) ($previousCounts[$previousKey] ?? 0),
+                    'current_is_sunday' => $currentIsSunday,
+                    'previous_is_sunday' => $previousIsSunday,
+                ];
+            }
+
+            $currentCursor = $currentCursor->modify('+1 day');
+            $previousCursor = $previousCursor->modify('+1 day');
+        }
+
+        return [
+            'current_start' => $currentStart->format('Y-m-d'),
+            'current_end' => $currentEnd->format('Y-m-d'),
+            'previous_start' => $previousStart->format('Y-m-d'),
+            'previous_end' => $previousMonthEnd->format('Y-m-d'),
+            'current_month_label' => $currentEnd->format('m/Y'),
+            'previous_month_label' => $previousMonthEnd->format('m/Y'),
+            'days' => $days,
+        ];
+    }
+
     public function dashboardOperations(?array $visibilityScope = null): array
     {
         $sql = 'SELECT DISTINCT hierarchy_bases.name

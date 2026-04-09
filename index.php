@@ -1966,11 +1966,21 @@ function dashboardViewData(
         )
         : null;
 
+    $finalizedComparison = $queueRepository->finalizedMonthComparison(
+        $customerTypeFilter !== '' ? $customerTypeFilter : null,
+        $operationFilter !== [] ? $operationFilter : null,
+        $baseGroupFilter !== [] ? $baseGroupFilter : null,
+        $coordinatorFilter !== [] ? $coordinatorFilter : null,
+        $regionalScope,
+        $dateToFilter ?? $dateFromFilter ?? date('Y-m-d')
+    );
+
     $dashboardStats['completed'] = (int) ($dashboardSalesKpis['finalized_sales'] ?? 0);
 
     return [
         'stats' => $dashboardStats,
         'recentBatches' => $batchRepository->recent(5),
+        'finalizedComparison' => $finalizedComparison,
         'dashboardCustomerTypeFilter' => $customerTypeFilter,
         'dashboardOperationFilter' => $operationFilter,
         'dashboardBaseGroupFilter' => $baseGroupFilter,

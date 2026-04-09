@@ -207,6 +207,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
     <?= view('dashboard/_live', [
         'stats' => $stats,
         'recentBatches' => $recentBatches,
+        'finalizedComparison' => $finalizedComparison,
         'dashboardExecutiveMode' => $dashboardExecutiveMode,
         'dashboardExecutiveData' => $dashboardExecutiveData,
     ]) ?>
