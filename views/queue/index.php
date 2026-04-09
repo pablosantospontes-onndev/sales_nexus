@@ -16,31 +16,31 @@
         'FINALIZADA' => 'FINALIZADA',
     ];
     $selectedStatusLabels = array_values(array_filter(array_map(
-        static fn (string $status): ?string => $statusOptions[$status] ?? null,
+        static fn(string $status): ?string => $statusOptions[$status] ?? null,
         $statusFilter ?? []
     )));
     $selectedModalityLabels = array_values(array_filter(array_map(
-        static fn (string $modality): string => $modality,
+        static fn(string $modality): string => $modality,
         $modalityFilter ?? []
     )));
     $selectedOperationLabels = array_values(array_filter(array_map(
-        static fn (string $operation): string => $operation,
+        static fn(string $operation): string => $operation,
         $operationFilter ?? []
     )));
     $selectedBaseGroupLabels = array_values(array_filter(array_map(
-        static fn (string $baseGroup): string => $baseGroup,
+        static fn(string $baseGroup): string => $baseGroup,
         $baseGroupFilter ?? []
     )));
     $selectedSupervisorLabels = array_values(array_filter(array_map(
-        static fn (string $supervisor): string => $supervisor,
+        static fn(string $supervisor): string => $supervisor,
         $supervisorFilter ?? []
     )));
     $selectedCoordinatorLabels = array_values(array_filter(array_map(
-        static fn (string $coordinator): string => $coordinator,
+        static fn(string $coordinator): string => $coordinator,
         $coordinatorFilter ?? []
     )));
     $selectedManagerLabels = array_values(array_filter(array_map(
-        static fn (string $manager): string => $manager,
+        static fn(string $manager): string => $manager,
         $managerFilter ?? []
     )));
     $customerTypeSummaryLabel = $customerTypeFilter !== ''
@@ -99,7 +99,7 @@
     if (($dateFromFilter ?? null) !== null && ($dateToFilter ?? null) !== null) {
         $dateRangeLabel = $dateFromFilter === $dateToFilter
             ? format_date_br($dateFromFilter)
-            : format_date_br($dateFromFilter) . ' at&eacute; ' . format_date_br($dateToFilter);
+            : format_date_br($dateFromFilter) . ' até ' . format_date_br($dateToFilter);
     } elseif (($dateFromFilter ?? null) !== null) {
         $dateRangeLabel = format_date_br($dateFromFilter);
     } elseif (($dateToFilter ?? null) !== null) {
@@ -183,7 +183,7 @@
             </div>
 
             <div class="queue-status-filter queue-operation-filter" data-queue-operation-filter>
-                <span>Opera&ccedil;&atilde;o</span>
+                <span>Operação</span>
                 <button type="button" class="queue-status-trigger" data-queue-operation-trigger aria-expanded="false">
                     <span data-queue-operation-summary><?= e($operationSummaryLabel) ?></span>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -205,8 +205,7 @@
                 class="date-range-field"
                 data-date-range
                 data-initial-start="<?= e($dateFromFilter ?? '') ?>"
-                data-initial-end="<?= e($dateToFilter ?? '') ?>"
-            >
+                data-initial-end="<?= e($dateToFilter ?? '') ?>">
                 <span>Entrada</span>
                 <input type="hidden" name="date_from" value="<?= e($dateFromFilter ?? '') ?>" data-date-range-start>
                 <input type="hidden" name="date_to" value="<?= e($dateToFilter ?? '') ?>" data-date-range-end>
@@ -220,11 +219,11 @@
 
                 <div class="date-range-picker" data-date-range-picker hidden>
                     <div class="date-range-head">
-                        <button type="button" class="date-range-nav" data-date-range-prev aria-label="M&ecirc;s anterior">
+                        <button type="button" class="date-range-nav" data-date-range-prev aria-label="Mês anterior">
                             <span aria-hidden="true">&#8249;</span>
                         </button>
                         <strong data-date-range-month></strong>
-                        <button type="button" class="date-range-nav" data-date-range-next aria-label="Pr&oacute;ximo m&ecirc;s">
+                        <button type="button" class="date-range-nav" data-date-range-next aria-label="Próximo mês">
                             <span aria-hidden="true">&#8250;</span>
                         </button>
                     </div>
@@ -260,7 +259,7 @@
                             <path d="M15.35 15.35 20 20" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round"></path>
                         </svg>
                     </button>
-                    <input type="text" name="term" value="<?= e($termFilter) ?>" placeholder="C&oacute;digo da venda ou cliente" data-queue-search-input <?= $termFilter !== '' ? '' : 'hidden' ?>>
+                    <input type="text" name="term" value="<?= e($termFilter) ?>" placeholder="Cód. PAP/CPF" data-queue-search-input <?= $termFilter !== '' ? '' : 'hidden' ?>>
                 </div>
             </div>
 
@@ -277,8 +276,7 @@
                     data-queue-extra-toggle
                     data-ui-tooltip="<?= $extraFiltersOpen ? 'Ocultar filtros' : 'Exibir mais filtros' ?>"
                     aria-label="Exibir mais filtros"
-                    aria-expanded="<?= $extraFiltersOpen ? 'true' : 'false' ?>"
-                >
+                    aria-expanded="<?= $extraFiltersOpen ? 'true' : 'false' ?>">
                     <span class="queue-extra-toggle-icon" data-queue-extra-icon><?= $extraFiltersOpen ? '&minus;' : '+' ?></span>
                 </button>
             </div>
@@ -286,7 +284,7 @@
 
         <div class="queue-extra-filters" data-queue-extra-filters <?= $extraFiltersOpen ? '' : 'hidden' ?>>
             <div class="queue-status-filter queue-base-group-filter" data-queue-base-group-filter>
-                <span>Base grupo</span>
+                <span>Base</span>
                 <button type="button" class="queue-status-trigger" data-queue-base-group-trigger aria-expanded="false">
                     <span data-queue-base-group-summary><?= e($baseGroupSummaryLabel) ?></span>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -305,7 +303,7 @@
             </div>
 
             <div class="queue-status-filter queue-manager-filter" data-queue-manager-filter>
-                <span>Gerente base</span>
+                <span>Gerente</span>
                 <button type="button" class="queue-status-trigger" data-queue-manager-trigger aria-expanded="false">
                     <span data-queue-manager-summary><?= e($managerSummaryLabel) ?></span>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -364,7 +362,7 @@
     </form>
 
     <p class="muted queue-filter-note">
-        Ao pesquisar por c&oacute;digo/cliente ou selecionar uma ou mais opera&ccedil;&otilde;es, a fila ignora temporariamente a vis&atilde;o regional/personalizada do usu&aacute;rio para permitir consultas pontuais em outras opera&ccedil;&otilde;es.
+        Ao pesquisar por código/cliente ou selecionar uma ou mais operações, a fila ignora temporariamente a visão regional/personalizada do usuário para permitir consultas pontuais em outras operações.
     </p>
 </section>
 
@@ -395,6 +393,7 @@
         'status' => 'PENDENTE INPUT',
         'date_from' => $prioritizeDateFrom ?? '',
         'date_to' => $prioritizeDateTo ?? '',
+        'queue_filters' => 1,
     ]);
     $todayLabel = format_date_br(date('Y-m-d'));
     $prioritizeDateLabel = format_date_br($prioritizeDateTo ?? date('Y-m-d'));
@@ -403,8 +402,7 @@
         class="modal-shell"
         data-queue-prioritize-modal
         data-queue-prioritize-dismiss-url="<?= e(url('queue/dismiss-prioritize')) ?>"
-        data-queue-prioritize-token="<?= e(\App\Core\Csrf::token()) ?>"
-    >
+        data-queue-prioritize-token="<?= e(\App\Core\Csrf::token()) ?>">
         <div class="modal-backdrop"></div>
         <div class="modal-card queue-prioritize-modal-card" role="dialog" aria-modal="true" aria-labelledby="queue-prioritize-title">
             <div class="section-header">
@@ -415,7 +413,7 @@
             </div>
 
             <p class="muted">
-                Existem <strong class="queue-prioritize-highlight"><?= e((string) ($pendingPriorCount ?? 0)) ?></strong> venda(s) de datas anteriores que ainda n&atilde;o foram finalizadas.
+                Existem <strong class="queue-prioritize-highlight"><?= e((string) ($pendingPriorCount ?? 0)) ?></strong> venda(s) de datas anteriores que ainda não foram finalizadas.
             </p>
 
             <div class="queue-prioritize-grid">
@@ -425,35 +423,34 @@
                 </div>
                 <div class="queue-prioritize-arrow" aria-hidden="true">&#8594;</div>
                 <div class="queue-prioritize-card is-emphasis">
-                    <span class="eyebrow">Priorizar at&eacute;</span>
+                    <span class="eyebrow">Priorizar até</span>
                     <strong><?= e($prioritizeDateLabel) ?></strong>
                 </div>
             </div>
 
             <div class="queue-prioritize-note">
                 <strong>O que acontece?</strong>
-                <p>Ao priorizar, a fila ser&aacute; filtrada automaticamente para mostrar apenas vendas pendentes de dias anteriores.</p>
+                <p>Ao priorizar, a fila será filtrada automaticamente para mostrar apenas vendas pendentes de dias anteriores.</p>
             </div>
 
-                <div class="form-actions">
-                    <div class="form-actions-left">
+            <div class="form-actions">
+                <div class="form-actions-left">
                     <button type="button" class="secondary-button queue-prioritize-dismiss-button" data-close-queue-prioritize-modal>
                         <i class="bi bi-hand-thumbs-down-fill" aria-hidden="true"></i>
                         Seguir sem priorizar
                     </button>
-                    </div>
-                    <div class="form-actions-right">
-                        <button
-                            type="button"
-                            class="primary-button queue-prioritize-action-button"
-                            data-queue-prioritize-action
-                            data-queue-prioritize-url="<?= e($prioritizeUrl) ?>"
-                        >
-                            <i class="bi bi-hand-thumbs-up-fill" aria-hidden="true"></i>
-                        Priorizar essas vendas
-                        </button>
-                    </div>
                 </div>
+                <div class="form-actions-right">
+                    <button
+                        type="button"
+                        class="primary-button queue-prioritize-action-button"
+                        data-queue-prioritize-action
+                        data-queue-prioritize-url="<?= e($prioritizeUrl) ?>">
+                        <i class="bi bi-hand-thumbs-up-fill" aria-hidden="true"></i>
+                        Priorizar essas vendas
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 <?php endif; ?>

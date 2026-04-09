@@ -2895,6 +2895,11 @@ html.theme-dark .reports-search-icon {
 }
 
 .executive-fullscreen-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
     border-color: rgba(123, 229, 255, 0.2);
     background: rgba(255, 255, 255, 0.04);
     color: #e7f8ff;
@@ -3750,6 +3755,18 @@ input.input-invalid {
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
     background: #ffffff;
+}
+
+.queue-table-wrap {
+    max-height: 420px;
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.queue-table-wrap::-webkit-scrollbar {
+    width: 0;
+    height: 0;
 }
 
 .compact-table {

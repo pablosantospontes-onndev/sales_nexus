@@ -151,7 +151,7 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
             </div>
 
             <div class="queue-status-filter dashboard-base-group-filter reports-checklist-filter" data-reports-checklist-filter data-default-label="Todos">
-                <span>Base grupo</span>
+                <span>Base</span>
                 <button type="button" class="queue-status-trigger" data-reports-checklist-trigger aria-expanded="false">
                     <span data-reports-checklist-summary>Todos</span>
                     <svg viewBox="0 0 24 24" aria-hidden="true">

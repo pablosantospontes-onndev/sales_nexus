@@ -1098,9 +1098,72 @@ function setupQueueLiveRefresh() {
 
     const intervalMs = Number(liveRoot.getAttribute('data-queue-live-interval')) || 4000;
     let isFetching = false;
+    let pendingListHtml = '';
+    let scrollTimeoutId = 0;
+    let pauseRefreshUntil = 0;
+
+    function markUserScrolling() {
+        listRoot.dataset.queueScrolling = '1';
+        pauseRefreshUntil = Date.now() + 1000;
+
+        if (scrollTimeoutId) {
+            window.clearTimeout(scrollTimeoutId);
+        }
+
+        scrollTimeoutId = window.setTimeout(() => {
+            listRoot.dataset.queueScrolling = '0';
+            pauseRefreshUntil = 0;
+            if (pendingListHtml !== '') {
+                const nextHtml = pendingListHtml;
+                pendingListHtml = '';
+                applyListUpdate(nextHtml);
+            }
+        }, 1000);
+    }
+
+    function bindQueueScroll(container) {
+        const scrollContainer = container || listRoot.querySelector('.queue-table-wrap');
+        if (!(scrollContainer instanceof HTMLElement)) {
+            return;
+        }
+
+        if (scrollContainer.dataset.queueScrollBound === '1') {
+            return;
+        }
+
+        scrollContainer.dataset.queueScrollBound = '1';
+        scrollContainer.addEventListener('scroll', markUserScrolling, { passive: true });
+    }
+
+    function applyListUpdate(listHtml) {
+        const previousScrollContainer = listRoot.querySelector('.queue-table-wrap');
+        const scrollState = previousScrollContainer
+            ? {
+                top: previousScrollContainer.scrollTop,
+                left: previousScrollContainer.scrollLeft,
+            }
+            : null;
+
+        window.requestAnimationFrame(() => {
+            listRoot.innerHTML = listHtml;
+            syncCustomTooltips(listRoot);
+
+            const nextScrollContainer = listRoot.querySelector('.queue-table-wrap');
+            if (scrollState && nextScrollContainer) {
+                const maxScrollTop = Math.max(0, nextScrollContainer.scrollHeight - nextScrollContainer.clientHeight);
+                const maxScrollLeft = Math.max(0, nextScrollContainer.scrollWidth - nextScrollContainer.clientWidth);
+                nextScrollContainer.scrollTop = Math.min(scrollState.top, maxScrollTop);
+                nextScrollContainer.scrollLeft = Math.min(scrollState.left, maxScrollLeft);
+            }
+
+            bindQueueScroll(nextScrollContainer);
+        });
+    }
+
+    bindQueueScroll();
 
     async function refreshQueue() {
-        if (isFetching || document.hidden) {
+        if (isFetching || document.hidden || (pauseRefreshUntil && Date.now() < pauseRefreshUntil)) {
             return;
         }
 
@@ -1131,8 +1194,11 @@ function setupQueueLiveRefresh() {
             }
 
             if (listHtml !== '' && listHtml !== listRoot.innerHTML.trim()) {
-                listRoot.innerHTML = listHtml;
-                syncCustomTooltips(listRoot);
+                if (listRoot.dataset.queueScrolling === '1') {
+                    pendingListHtml = listHtml;
+                } else {
+                    applyListUpdate(listHtml);
+                }
             }
         } catch (error) {
             // Keep the page usable even if a polling request fails temporarily.

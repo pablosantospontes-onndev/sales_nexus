@@ -49,7 +49,7 @@ $previousMonthLabel = $finalizedComparison['previous_month_label'] ?? '';
             <div>
                 <p class="eyebrow">Painel executivo</p>
                 <h3>Acompanhamento ao vivo</h3>
-                <p>Atualiza&ccedil;&atilde;o autom&aacute;tica a cada <?= e((string) $refreshSeconds) ?>s para opera&ccedil;&atilde;o, supervis&atilde;o e exibi&ccedil;&atilde;o em TV.</p>
+                <p>Atualização automática a cada <?= e((string) $refreshSeconds) ?>s</p>
             </div>
 
             <div class="executive-dashboard-actions">

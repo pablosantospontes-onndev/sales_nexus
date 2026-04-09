@@ -23,7 +23,7 @@ $queueContextParams = [
         <span class="muted">Exibindo <?= e((string) count($items)) ?> de <?= e((string) $totalItems) ?> registros</span>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap queue-table-wrap">
         <table class="queue-table">
             <thead>
             <tr>
