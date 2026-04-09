@@ -19,7 +19,8 @@ $executiveRefreshMs = (int) (($dashboardExecutiveData['refreshSeconds'] ?? 8) * 
                 <?php if ($dashboardExecutiveMode): ?>
                     <a href="<?= e($dashboardExecutiveExitUrl) ?>" class="secondary-button dashboard-mode-button is-active">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M7 7h4M7 17h4M7 7v4M7 17v-4M17 7h-4M17 17h-4M17 7v4M17 17v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M10 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
                         </svg>
                         <span>Voltar ao resumo</span>
                     </a>

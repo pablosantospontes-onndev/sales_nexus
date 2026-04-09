@@ -100,6 +100,8 @@ final class ImportQueueRepository
         );
 
         $baseSql = "FROM sales_import_queue
+            INNER JOIN sales_nexus
+                    ON sales_nexus.IMPORT_QUEUE_ID = sales_import_queue.id
             LEFT JOIN seller_hierarchies
                    ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
                   AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, '%Y%m')
@@ -118,21 +120,21 @@ final class ImportQueueRepository
         ];
 
         $currentStatement = Database::connection()->prepare(
-            "SELECT DATE(sales_import_queue.finalized_at) AS ref_date, COUNT(*) AS total
+            "SELECT DATE(sales_nexus.VENDA_DATA_INPUT) AS ref_date, COUNT(DISTINCT sales_import_queue.id) AS total
              {$baseSql}
-               AND sales_import_queue.finalized_at IS NOT NULL
-               AND DATE(sales_import_queue.finalized_at) BETWEEN :current_date_from AND :current_date_to
-             GROUP BY DATE(sales_import_queue.finalized_at)"
+               AND sales_nexus.VENDA_DATA_INPUT IS NOT NULL
+               AND DATE(sales_nexus.VENDA_DATA_INPUT) BETWEEN :current_date_from AND :current_date_to
+             GROUP BY DATE(sales_nexus.VENDA_DATA_INPUT)"
         );
         $currentStatement->execute($bindings + $currentBindings);
         $currentRows = $currentStatement->fetchAll();
 
         $previousStatement = Database::connection()->prepare(
-            "SELECT DATE(sales_import_queue.finalized_at) AS ref_date, COUNT(*) AS total
+            "SELECT DATE(sales_nexus.VENDA_DATA_INPUT) AS ref_date, COUNT(DISTINCT sales_import_queue.id) AS total
              {$baseSql}
-               AND sales_import_queue.finalized_at IS NOT NULL
-               AND DATE(sales_import_queue.finalized_at) BETWEEN :previous_date_from AND :previous_date_to
-             GROUP BY DATE(sales_import_queue.finalized_at)"
+               AND sales_nexus.VENDA_DATA_INPUT IS NOT NULL
+               AND DATE(sales_nexus.VENDA_DATA_INPUT) BETWEEN :previous_date_from AND :previous_date_to
+             GROUP BY DATE(sales_nexus.VENDA_DATA_INPUT)"
         );
         $previousStatement->execute($bindings + $previousBindings);
         $previousRows = $previousStatement->fetchAll();
@@ -286,6 +288,234 @@ final class ImportQueueRepository
         )));
     }
 
+    public function dashboardManagers(?array $visibilityScope = null): array
+    {
+        $sql = 'SELECT DISTINCT seller_hierarchies.manager_name AS name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                WHERE seller_hierarchies.manager_name IS NOT NULL
+                  AND TRIM(seller_hierarchies.manager_name) <> ""';
+        [$visibilitySql, $bindings] = $this->buildVisibilityScopeFilters($visibilityScope);
+        $sql .= $visibilitySql;
+
+        $sql .= ' ORDER BY seller_hierarchies.manager_name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueBaseGroups(
+        ?array $operationNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
+        ?array $visibilityScope = null
+    ): array
+    {
+        $sql = 'SELECT DISTINCT hierarchy_base_groups.name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE hierarchy_base_groups.name IS NOT NULL
+                  AND hierarchy_base_groups.name <> ""';
+
+        [$filtersSql, $bindings] = $this->buildQueueHierarchyFilters(
+            $operationNames,
+            null,
+            $supervisorNames,
+            $coordinatorNames,
+            $managerNames,
+            $visibilityScope
+        );
+        $sql .= $filtersSql;
+        $sql .= ' ORDER BY hierarchy_base_groups.name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueOperations(
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
+        ?array $visibilityScope = null
+    ): array {
+        $sql = 'SELECT DISTINCT hierarchy_bases.name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE hierarchy_bases.name IS NOT NULL
+                  AND hierarchy_bases.name <> ""';
+
+        [$filtersSql, $bindings] = $this->buildQueueHierarchyFilters(
+            null,
+            $baseGroupNames,
+            $supervisorNames,
+            $coordinatorNames,
+            $managerNames,
+            $visibilityScope
+        );
+        $sql .= $filtersSql;
+        $sql .= ' ORDER BY hierarchy_bases.name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueSupervisors(
+        ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
+        ?array $visibilityScope = null
+    ): array {
+        $sql = 'SELECT DISTINCT seller_hierarchies.supervisor_name AS name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE seller_hierarchies.supervisor_name IS NOT NULL
+                  AND TRIM(seller_hierarchies.supervisor_name) <> ""';
+
+        [$filtersSql, $bindings] = $this->buildQueueHierarchyFilters(
+            $operationNames,
+            $baseGroupNames,
+            null,
+            $coordinatorNames,
+            $managerNames,
+            $visibilityScope
+        );
+        $sql .= $filtersSql;
+        $sql .= ' ORDER BY seller_hierarchies.supervisor_name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueCoordinators(
+        ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $managerNames = null,
+        ?array $visibilityScope = null
+    ): array {
+        $sql = 'SELECT DISTINCT seller_hierarchies.coordinator_name AS name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE seller_hierarchies.coordinator_name IS NOT NULL
+                  AND TRIM(seller_hierarchies.coordinator_name) <> ""';
+
+        [$filtersSql, $bindings] = $this->buildQueueHierarchyFilters(
+            $operationNames,
+            $baseGroupNames,
+            $supervisorNames,
+            null,
+            $managerNames,
+            $visibilityScope
+        );
+        $sql .= $filtersSql;
+        $sql .= ' ORDER BY seller_hierarchies.coordinator_name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueManagers(
+        ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $visibilityScope = null
+    ): array {
+        $sql = 'SELECT DISTINCT seller_hierarchies.manager_name AS name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE seller_hierarchies.manager_name IS NOT NULL
+                  AND TRIM(seller_hierarchies.manager_name) <> ""';
+
+        [$filtersSql, $bindings] = $this->buildQueueHierarchyFilters($operationNames, $baseGroupNames, $supervisorNames, $coordinatorNames, null, $visibilityScope);
+        $sql .= $filtersSql;
+        $sql .= ' ORDER BY seller_hierarchies.manager_name ASC';
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return array_values(array_filter(array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $statement->fetchAll()
+        )));
+    }
+
+    public function queueHierarchyMatrix(?array $visibilityScope = null): array
+    {
+        $sql = 'SELECT DISTINCT
+                    hierarchy_bases.name AS operation_name,
+                    hierarchy_base_groups.name AS base_group_name,
+                    seller_hierarchies.supervisor_name AS supervisor_name,
+                    seller_hierarchies.coordinator_name AS coordinator_name,
+                    seller_hierarchies.manager_name AS manager_name
+                FROM sales_import_queue
+                INNER JOIN seller_hierarchies
+                        ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
+                       AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
+                INNER JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+                INNER JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
+                WHERE 1 = 1';
+
+        [$visibilitySql, $bindings] = $this->buildVisibilityScopeFilters($visibilityScope);
+        $sql .= $visibilitySql;
+
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($bindings);
+
+        return $statement->fetchAll() ?: [];
+    }
+
     public function queueModalities(): array
     {
         $statement = Database::connection()->query(
@@ -310,6 +540,10 @@ final class ImportQueueRepository
         ?string $dateFrom = null,
         ?string $dateTo = null,
         ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
         int $page = 1,
         int $perPage = 50,
         ?array $visibilityScope = null
@@ -318,7 +552,20 @@ final class ImportQueueRepository
         $connection = Database::connection();
         $page = max(1, $page);
         $perPage = max(1, $perPage);
-        [$filtersSql, $bindings] = $this->buildSearchFilters($statuses, $term, $customerType, $modalities, $dateFrom, $dateTo, $operationNames, $visibilityScope);
+        [$filtersSql, $bindings] = $this->buildSearchFilters(
+            $statuses,
+            $term,
+            $customerType,
+            $modalities,
+            $dateFrom,
+            $dateTo,
+            $operationNames,
+            $baseGroupNames,
+            $supervisorNames,
+            $coordinatorNames,
+            $managerNames,
+            $visibilityScope
+        );
 
         $countStatement = $connection->prepare(
             'SELECT COUNT(*)
@@ -327,6 +574,7 @@ final class ImportQueueRepository
                     ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
                    AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, \'%Y%m\')
              LEFT JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+             LEFT JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
              WHERE 1 = 1' . $filtersSql
         );
         $countStatement->execute($bindings);
@@ -374,6 +622,10 @@ final class ImportQueueRepository
         ?string $dateFrom = null,
         ?string $dateTo = null,
         ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
         ?array $visibilityScope = null
     ): array {
         [$filtersSql, $bindings] = $this->buildSearchFilters(
@@ -384,6 +636,10 @@ final class ImportQueueRepository
             $dateFrom,
             $dateTo,
             $operationNames,
+            $baseGroupNames,
+            $supervisorNames,
+            $coordinatorNames,
+            $managerNames,
             $visibilityScope
         );
 
@@ -400,6 +656,7 @@ final class ImportQueueRepository
                     ON seller_hierarchies.seller_cpf = sales_import_queue.seller_cpf
                    AND seller_hierarchies.PERIODO_HEADCOUNT = DATE_FORMAT(sales_import_queue.sale_input_date, '%Y%m')
              LEFT JOIN hierarchy_bases ON hierarchy_bases.id = seller_hierarchies.base_id
+             LEFT JOIN hierarchy_base_groups ON hierarchy_base_groups.id = seller_hierarchies.base_group_id
              WHERE 1 = 1" . $filtersSql
         );
         $statement->execute($bindings);
@@ -467,6 +724,10 @@ final class ImportQueueRepository
         ?string $dateFrom = null,
         ?string $dateTo = null,
         ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
         ?array $visibilityScope = null
     ): array
     {
@@ -556,6 +817,187 @@ final class ImportQueueRepository
 
             $filtersSql .= ' AND hierarchy_bases.name IN (' . implode(', ', $operationPlaceholders) . ')';
         }
+
+        $validBaseGroups = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $baseGroup): string => normalize_text((string) $baseGroup),
+            $baseGroupNames ?? []
+        )), static fn (string $baseGroup): bool => $baseGroup !== ''));
+
+        if ($validBaseGroups !== []) {
+            $baseGroupPlaceholders = [];
+
+            foreach ($validBaseGroups as $index => $baseGroupName) {
+                $key = 'base_group_' . $index;
+                $baseGroupPlaceholders[] = ':' . $key;
+                $bindings[$key] = $baseGroupName;
+            }
+
+            $filtersSql .= ' AND hierarchy_base_groups.name IN (' . implode(', ', $baseGroupPlaceholders) . ')';
+        }
+
+        $validSupervisors = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $supervisor): string => normalize_text((string) $supervisor),
+            $supervisorNames ?? []
+        )), static fn (string $supervisor): bool => $supervisor !== ''));
+
+        if ($validSupervisors !== []) {
+            $supervisorPlaceholders = [];
+
+            foreach ($validSupervisors as $index => $supervisorName) {
+                $key = 'supervisor_name_' . $index;
+                $supervisorPlaceholders[] = ':' . $key;
+                $bindings[$key] = $supervisorName;
+            }
+
+            $filtersSql .= ' AND seller_hierarchies.supervisor_name IN (' . implode(', ', $supervisorPlaceholders) . ')';
+        }
+
+        $validCoordinators = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $coordinator): string => normalize_text((string) $coordinator),
+            $coordinatorNames ?? []
+        )), static fn (string $coordinator): bool => $coordinator !== ''));
+
+        if ($validCoordinators !== []) {
+            $coordinatorPlaceholders = [];
+
+            foreach ($validCoordinators as $index => $coordinatorName) {
+                $key = 'coordinator_name_' . $index;
+                $coordinatorPlaceholders[] = ':' . $key;
+                $bindings[$key] = $coordinatorName;
+            }
+
+            $filtersSql .= ' AND seller_hierarchies.coordinator_name IN (' . implode(', ', $coordinatorPlaceholders) . ')';
+        }
+
+        $validManagers = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $manager): string => normalize_text((string) $manager),
+            $managerNames ?? []
+        )), static fn (string $manager): bool => $manager !== ''));
+
+        if ($validManagers !== []) {
+            $managerPlaceholders = [];
+
+            foreach ($validManagers as $index => $managerName) {
+                $key = 'manager_name_' . $index;
+                $managerPlaceholders[] = ':' . $key;
+                $bindings[$key] = $managerName;
+            }
+
+            $filtersSql .= ' AND seller_hierarchies.manager_name IN (' . implode(', ', $managerPlaceholders) . ')';
+        }
+
+        return [$filtersSql, $bindings];
+    }
+
+    private function buildQueueHierarchyFilters(
+        ?array $operationNames = null,
+        ?array $baseGroupNames = null,
+        ?array $supervisorNames = null,
+        ?array $coordinatorNames = null,
+        ?array $managerNames = null,
+        ?array $visibilityScope = null
+    ): array {
+        $filtersSql = '';
+        $bindings = [];
+
+        if ($operationNames !== null) {
+            $validOperations = array_values(array_filter(array_unique(array_map(
+                static fn (mixed $operation): string => normalize_text((string) $operation),
+                $operationNames
+            )), static fn (string $operation): bool => $operation !== ''));
+
+            if ($validOperations !== []) {
+                $placeholders = [];
+
+                foreach ($validOperations as $index => $operationName) {
+                    $key = 'queue_operation_' . $index;
+                    $placeholders[] = ':' . $key;
+                    $bindings[$key] = $operationName;
+                }
+
+                $filtersSql .= ' AND hierarchy_bases.name IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if ($baseGroupNames !== null) {
+            $validBaseGroups = array_values(array_filter(array_unique(array_map(
+                static fn (mixed $baseGroup): string => normalize_text((string) $baseGroup),
+                $baseGroupNames
+            )), static fn (string $baseGroup): bool => $baseGroup !== ''));
+
+            if ($validBaseGroups !== []) {
+                $placeholders = [];
+
+                foreach ($validBaseGroups as $index => $baseGroupName) {
+                    $key = 'queue_base_group_' . $index;
+                    $placeholders[] = ':' . $key;
+                    $bindings[$key] = $baseGroupName;
+                }
+
+                $filtersSql .= ' AND hierarchy_base_groups.name IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if ($supervisorNames !== null) {
+            $validSupervisors = array_values(array_filter(array_unique(array_map(
+                static fn (mixed $supervisor): string => normalize_text((string) $supervisor),
+                $supervisorNames
+            )), static fn (string $supervisor): bool => $supervisor !== ''));
+
+            if ($validSupervisors !== []) {
+                $placeholders = [];
+
+                foreach ($validSupervisors as $index => $supervisorName) {
+                    $key = 'queue_supervisor_' . $index;
+                    $placeholders[] = ':' . $key;
+                    $bindings[$key] = $supervisorName;
+                }
+
+                $filtersSql .= ' AND seller_hierarchies.supervisor_name IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if ($coordinatorNames !== null) {
+            $validCoordinators = array_values(array_filter(array_unique(array_map(
+                static fn (mixed $coordinator): string => normalize_text((string) $coordinator),
+                $coordinatorNames
+            )), static fn (string $coordinator): bool => $coordinator !== ''));
+
+            if ($validCoordinators !== []) {
+                $placeholders = [];
+
+                foreach ($validCoordinators as $index => $coordinatorName) {
+                    $key = 'queue_coordinator_' . $index;
+                    $placeholders[] = ':' . $key;
+                    $bindings[$key] = $coordinatorName;
+                }
+
+                $filtersSql .= ' AND seller_hierarchies.coordinator_name IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if ($managerNames !== null) {
+            $validManagers = array_values(array_filter(array_unique(array_map(
+                static fn (mixed $manager): string => normalize_text((string) $manager),
+                $managerNames
+            )), static fn (string $manager): bool => $manager !== ''));
+
+            if ($validManagers !== []) {
+                $placeholders = [];
+
+                foreach ($validManagers as $index => $managerName) {
+                    $key = 'queue_manager_' . $index;
+                    $placeholders[] = ':' . $key;
+                    $bindings[$key] = $managerName;
+                }
+
+                $filtersSql .= ' AND seller_hierarchies.manager_name IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        [$visibilitySql, $visibilityBindings] = $this->buildVisibilityScopeFilters($visibilityScope);
+        $filtersSql .= $visibilitySql;
+        $bindings += $visibilityBindings;
 
         return [$filtersSql, $bindings];
     }

@@ -825,17 +825,18 @@ switch ($route) {
         break;
 
     case 'queue':
-        render('queue/index', queueListingViewData($queueRepository) + [
+        render('queue/index', queueListingViewData($queueRepository, true) + [
             'title' => 'Fila de auditoria',
         ]);
         break;
 
     case 'queue/live':
         header('Content-Type: application/json; charset=UTF-8');
-        $queueLiveData = queueListingViewData($queueRepository);
+        $queueLiveData = queueListingViewData($queueRepository, false);
         echo json_encode([
             'summary_html' => view('queue/_summary', [
                 'queueSummary' => $queueLiveData['queueSummary'] ?? [],
+                'queueSummaryLabel' => $queueLiveData['queueSummaryLabel'] ?? null,
             ]),
             'list_html' => view('queue/_list', $queueLiveData),
         ], JSON_UNESCAPED_UNICODE);
@@ -2008,13 +2009,25 @@ function dashboardViewData(
 
 function queueContextParamsFromRequest(): array
 {
+    $clearFilters = isset($_GET['clear']);
+    $submittedFilters = isset($_GET['queue_filters']);
+    $source = $_GET;
+
+    if ($clearFilters) {
+        unset($_SESSION['queue_filters']);
+        $source = [];
+        $submittedFilters = true;
+    } elseif (! $submittedFilters && isset($_SESSION['queue_filters']) && is_array($_SESSION['queue_filters'])) {
+        $source = $_SESSION['queue_filters'];
+    }
+
     $statusValues = array_values(array_filter(array_unique(array_map(
         static fn(mixed $status): string => strtoupper(normalize_text((string) $status)),
-        (array) ($_GET['status'] ?? [])
+        (array) ($source['status'] ?? [])
     )), static fn(string $status): bool => in_array($status, ['PENDENTE INPUT', 'AUDITANDO', 'FINALIZADA'], true)));
 
     if ($statusValues === []) {
-        $legacyStatus = strtoupper(normalize_text($_GET['status'] ?? ''));
+        $legacyStatus = strtoupper(normalize_text($source['status'] ?? ''));
 
         if (in_array($legacyStatus, ['PENDENTE INPUT', 'AUDITANDO', 'FINALIZADA'], true)) {
             $statusValues = [$legacyStatus];
@@ -2023,40 +2036,83 @@ function queueContextParamsFromRequest(): array
 
     $modalityValues = array_values(array_filter(array_unique(array_map(
         static fn(mixed $modality): string => normalize_text((string) $modality),
-        (array) ($_GET['modality'] ?? [])
+        (array) ($source['modality'] ?? [])
     )), static fn(string $modality): bool => $modality !== ''));
     $operationValues = array_values(array_filter(array_unique(array_map(
         static fn(mixed $operation): string => normalize_text((string) $operation),
-        (array) ($_GET['operation'] ?? [])
+        (array) ($source['operation'] ?? [])
     )), static fn(string $operation): bool => $operation !== ''));
+    $baseGroupValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $baseGroup): string => normalize_text((string) $baseGroup),
+        (array) ($source['base_group'] ?? [])
+    )), static fn(string $baseGroup): bool => $baseGroup !== ''));
+    $supervisorValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $supervisor): string => normalize_text((string) $supervisor),
+        (array) ($source['supervisor'] ?? [])
+    )), static fn(string $supervisor): bool => $supervisor !== ''));
+    $coordinatorValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $coordinator): string => normalize_text((string) $coordinator),
+        (array) ($source['coordinator'] ?? [])
+    )), static fn(string $coordinator): bool => $coordinator !== ''));
+    $managerValues = array_values(array_filter(array_unique(array_map(
+        static fn(mixed $manager): string => normalize_text((string) $manager),
+        (array) ($source['manager'] ?? [])
+    )), static fn(string $manager): bool => $manager !== ''));
 
-    return [
+    $context = [
         'status' => $statusValues !== [] ? $statusValues : null,
-        'customer_type' => normalize_text($_GET['customer_type'] ?? '') !== '' ? normalize_text($_GET['customer_type'] ?? '') : null,
+        'customer_type' => normalize_text($source['customer_type'] ?? '') !== '' ? normalize_text($source['customer_type'] ?? '') : null,
         'modality' => $modalityValues !== [] ? $modalityValues : null,
         'operation' => $operationValues !== [] ? $operationValues : null,
-        'term' => normalize_text($_GET['term'] ?? '') !== '' ? normalize_text($_GET['term'] ?? '') : null,
-        'date_from' => normalize_date_to_db($_GET['date_from'] ?? null),
-        'date_to' => normalize_date_to_db($_GET['date_to'] ?? null),
+        'base_group' => $baseGroupValues !== [] ? $baseGroupValues : null,
+        'supervisor' => $supervisorValues !== [] ? $supervisorValues : null,
+        'coordinator' => $coordinatorValues !== [] ? $coordinatorValues : null,
+        'manager' => $managerValues !== [] ? $managerValues : null,
+        'term' => normalize_text($source['term'] ?? '') !== '' ? normalize_text($source['term'] ?? '') : null,
+        'date_from' => normalize_date_to_db($source['date_from'] ?? null),
+        'date_to' => normalize_date_to_db($source['date_to'] ?? null),
     ];
+
+    if ($submittedFilters) {
+        $_SESSION['queue_filters'] = $context;
+    }
+
+    return $context;
 }
 
-function queueListingViewData(ImportQueueRepository $queueRepository): array
+function queueListingViewData(ImportQueueRepository $queueRepository, bool $includeFilterOptions = true): array
 {
     $regionalScope = currentUserQueueScope();
-    $statusFilter = (array) (queueContextParamsFromRequest()['status'] ?? []);
-    $termFilter = normalize_text($_GET['term'] ?? '');
-    $customerTypeFilter = normalize_text($_GET['customer_type'] ?? '');
+    $queueContext = queueContextParamsFromRequest();
+    $statusFilter = (array) ($queueContext['status'] ?? []);
+    $termFilter = normalize_text($queueContext['term'] ?? '');
+    $customerTypeFilter = normalize_text($queueContext['customer_type'] ?? '');
     $modalityFilter = array_values(array_filter(array_map(
         static fn(mixed $modality): string => normalize_text((string) $modality),
-        (array) ($_GET['modality'] ?? [])
+        (array) ($queueContext['modality'] ?? [])
     ), static fn(string $modality): bool => $modality !== ''));
     $operationFilter = array_values(array_filter(array_map(
         static fn(mixed $operation): string => normalize_text((string) $operation),
-        (array) (queueContextParamsFromRequest()['operation'] ?? [])
+        (array) ($queueContext['operation'] ?? [])
     ), static fn(string $operation): bool => $operation !== ''));
-    $dateFromFilter = normalize_date_to_db($_GET['date_from'] ?? null);
-    $dateToFilter = normalize_date_to_db($_GET['date_to'] ?? null);
+    $baseGroupFilter = array_values(array_filter(array_map(
+        static fn(mixed $baseGroup): string => normalize_text((string) $baseGroup),
+        (array) ($queueContext['base_group'] ?? [])
+    ), static fn(string $baseGroup): bool => $baseGroup !== ''));
+    $supervisorFilter = array_values(array_filter(array_map(
+        static fn(mixed $supervisor): string => normalize_text((string) $supervisor),
+        (array) ($queueContext['supervisor'] ?? [])
+    ), static fn(string $supervisor): bool => $supervisor !== ''));
+    $coordinatorFilter = array_values(array_filter(array_map(
+        static fn(mixed $coordinator): string => normalize_text((string) $coordinator),
+        (array) ($queueContext['coordinator'] ?? [])
+    ), static fn(string $coordinator): bool => $coordinator !== ''));
+    $managerFilter = array_values(array_filter(array_map(
+        static fn(mixed $manager): string => normalize_text((string) $manager),
+        (array) ($queueContext['manager'] ?? [])
+    ), static fn(string $manager): bool => $manager !== ''));
+    $dateFromFilter = $queueContext['date_from'] ?? null;
+    $dateToFilter = $queueContext['date_to'] ?? null;
     $summaryDateFrom = $dateFromFilter;
     $summaryDateTo = $dateToFilter;
 
@@ -2074,6 +2130,18 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         $summaryDateTo = $today;
     }
 
+    $summaryRangeLabel = '-';
+    if ($summaryDateFrom !== null && $summaryDateTo !== null) {
+        $summaryRangeLabel = $summaryDateFrom === $summaryDateTo
+            ? format_date_br($summaryDateFrom)
+            : format_date_br($summaryDateFrom) . ' até ' . format_date_br($summaryDateTo);
+    } elseif ($summaryDateFrom !== null) {
+        $summaryRangeLabel = format_date_br($summaryDateFrom);
+    } elseif ($summaryDateTo !== null) {
+        $summaryRangeLabel = format_date_br($summaryDateTo);
+    }
+    $queueSummaryLabel = 'Referente a: ' . $summaryRangeLabel;
+
     $today = date('Y-m-d');
     $yesterday = date('Y-m-d', strtotime('-1 day', strtotime($today)));
     $pendingPriorCount = $queueRepository->pendingBeforeDate($today, $regionalScope);
@@ -2085,6 +2153,166 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
     $hasOlderDateTo = $dateToFilter !== null && $dateToFilter < $today;
     $showPrioritizeModal = $pendingPriorCount > 0 && ! ($hasPendingFilter && $hasOlderDateTo) && ! $prioritizeDismissed;
 
+    $operations = [];
+    $modalities = [];
+    $baseGroups = [];
+    $supervisors = [];
+    $coordinators = [];
+    $managers = [];
+
+    if ($includeFilterOptions) {
+        $modalities = $queueRepository->queueModalities();
+
+        foreach ($modalityFilter as $selectedModality) {
+            if (! in_array($selectedModality, $modalities, true)) {
+                $modalities[] = $selectedModality;
+            }
+        }
+
+        sort($modalities);
+
+        $allowGlobalOperations = Auth::hasRole('BACKOFFICE', 'BACKOFFICE SUPERVISOR');
+        $hierarchyScope = ($allowGlobalOperations && $operationFilter !== []) ? null : $regionalScope;
+        $hierarchyRows = $queueRepository->queueHierarchyMatrix($hierarchyScope);
+        $operationHierarchyRows = $allowGlobalOperations
+            ? $queueRepository->queueHierarchyMatrix(null)
+            : $hierarchyRows;
+
+        $filterRows = static function (
+            array $rows,
+            array $operationNames,
+            array $baseGroupNames,
+            array $supervisorNames,
+            array $coordinatorNames,
+            array $managerNames
+        ): array {
+            return array_values(array_filter($rows, static function (array $row) use (
+                $operationNames,
+                $baseGroupNames,
+                $supervisorNames,
+                $coordinatorNames,
+                $managerNames
+            ): bool {
+                $operationName = normalize_text((string) ($row['operation_name'] ?? ''));
+                $baseGroupName = normalize_text((string) ($row['base_group_name'] ?? ''));
+                $supervisorName = normalize_text((string) ($row['supervisor_name'] ?? ''));
+                $coordinatorName = normalize_text((string) ($row['coordinator_name'] ?? ''));
+                $managerName = normalize_text((string) ($row['manager_name'] ?? ''));
+
+                if ($operationNames !== [] && ! in_array($operationName, $operationNames, true)) {
+                    return false;
+                }
+
+                if ($baseGroupNames !== [] && ! in_array($baseGroupName, $baseGroupNames, true)) {
+                    return false;
+                }
+
+                if ($supervisorNames !== [] && ! in_array($supervisorName, $supervisorNames, true)) {
+                    return false;
+                }
+
+                if ($coordinatorNames !== [] && ! in_array($coordinatorName, $coordinatorNames, true)) {
+                    return false;
+                }
+
+                if ($managerNames !== [] && ! in_array($managerName, $managerNames, true)) {
+                    return false;
+                }
+
+                return true;
+            }));
+        };
+
+        $collectValues = static function (array $rows, string $key): array {
+            $values = [];
+
+            foreach ($rows as $row) {
+                $value = normalize_text((string) ($row[$key] ?? ''));
+                if ($value === '') {
+                    continue;
+                }
+                $values[$value] = true;
+            }
+
+            $list = array_keys($values);
+            sort($list);
+
+            return $list;
+        };
+
+        $operations = $collectValues(
+            $filterRows($operationHierarchyRows, [], $baseGroupFilter, $supervisorFilter, $coordinatorFilter, $managerFilter),
+            'operation_name'
+        );
+
+        foreach ($operationFilter as $selectedOperation) {
+            if (! in_array($selectedOperation, $operations, true)) {
+                $operations[] = $selectedOperation;
+            }
+        }
+
+        sort($operations);
+
+        $baseGroups = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, [], $supervisorFilter, $coordinatorFilter, $managerFilter),
+            'base_group_name'
+        );
+        $baseGroupFilter = array_values(array_intersect($baseGroupFilter, $baseGroups));
+
+        $supervisors = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, [], $coordinatorFilter, $managerFilter),
+            'supervisor_name'
+        );
+        $supervisorFilter = array_values(array_intersect($supervisorFilter, $supervisors));
+
+        $coordinators = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, $supervisorFilter, [], $managerFilter),
+            'coordinator_name'
+        );
+        $coordinatorFilter = array_values(array_intersect($coordinatorFilter, $coordinators));
+
+        $managers = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, $supervisorFilter, $coordinatorFilter, []),
+            'manager_name'
+        );
+        $managerFilter = array_values(array_intersect($managerFilter, $managers));
+
+        $operations = $collectValues(
+            $filterRows($operationHierarchyRows, [], $baseGroupFilter, $supervisorFilter, $coordinatorFilter, $managerFilter),
+            'operation_name'
+        );
+        $operationFilter = array_values(array_intersect($operationFilter, $operations));
+
+        $baseGroups = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, [], $supervisorFilter, $coordinatorFilter, $managerFilter),
+            'base_group_name'
+        );
+        $baseGroupFilter = array_values(array_intersect($baseGroupFilter, $baseGroups));
+
+        $supervisors = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, [], $coordinatorFilter, $managerFilter),
+            'supervisor_name'
+        );
+        $supervisorFilter = array_values(array_intersect($supervisorFilter, $supervisors));
+
+        $coordinators = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, $supervisorFilter, [], $managerFilter),
+            'coordinator_name'
+        );
+        $coordinatorFilter = array_values(array_intersect($coordinatorFilter, $coordinators));
+
+        $managers = $collectValues(
+            $filterRows($hierarchyRows, $operationFilter, $baseGroupFilter, $supervisorFilter, $coordinatorFilter, []),
+            'manager_name'
+        );
+        $managerFilter = array_values(array_intersect($managerFilter, $managers));
+
+        $operations = $collectValues(
+            $filterRows($operationHierarchyRows, [], $baseGroupFilter, $supervisorFilter, $coordinatorFilter, $managerFilter),
+            'operation_name'
+        );
+    }
+
     $pageNumber = max(1, (int) ($_GET['page'] ?? 1));
     $queueResult = $queueRepository->search(
         $statusFilter !== [] ? $statusFilter : null,
@@ -2094,6 +2322,10 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         $dateFromFilter,
         $dateToFilter,
         $operationFilter !== [] ? $operationFilter : null,
+        $baseGroupFilter !== [] ? $baseGroupFilter : null,
+        $supervisorFilter !== [] ? $supervisorFilter : null,
+        $coordinatorFilter !== [] ? $coordinatorFilter : null,
+        $managerFilter !== [] ? $managerFilter : null,
         $pageNumber,
         50,
         $regionalScope
@@ -2106,27 +2338,12 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         $summaryDateFrom,
         $summaryDateTo,
         $operationFilter !== [] ? $operationFilter : null,
+        $baseGroupFilter !== [] ? $baseGroupFilter : null,
+        $supervisorFilter !== [] ? $supervisorFilter : null,
+        $coordinatorFilter !== [] ? $coordinatorFilter : null,
+        $managerFilter !== [] ? $managerFilter : null,
         $regionalScope
     );
-
-    $operations = $queueRepository->dashboardOperations();
-    $modalities = $queueRepository->queueModalities();
-
-    foreach ($operationFilter as $selectedOperation) {
-        if (! in_array($selectedOperation, $operations, true)) {
-            $operations[] = $selectedOperation;
-        }
-    }
-
-    sort($operations);
-
-    foreach ($modalityFilter as $selectedModality) {
-        if (! in_array($selectedModality, $modalities, true)) {
-            $modalities[] = $selectedModality;
-        }
-    }
-
-    sort($modalities);
 
     return [
         'statusFilter' => $statusFilter,
@@ -2134,12 +2351,23 @@ function queueListingViewData(ImportQueueRepository $queueRepository): array
         'customerTypeFilter' => $customerTypeFilter,
         'modalityFilter' => $modalityFilter,
         'operationFilter' => $operationFilter,
+        'baseGroupFilter' => $baseGroupFilter,
+        'supervisorFilter' => $supervisorFilter,
+        'coordinatorFilter' => $coordinatorFilter,
+        'managerFilter' => $managerFilter,
         'queueOperations' => $operations,
         'queueModalities' => $modalities,
+        'queueBaseGroups' => $baseGroups,
+        'queueSupervisors' => $supervisors,
+        'queueCoordinators' => $coordinators,
+        'queueManagers' => $managers,
         'dateFromFilter' => $dateFromFilter,
         'dateToFilter' => $dateToFilter,
         'items' => $queueResult['items'],
         'queueSummary' => $queueSummary,
+        'queueSummaryDateFrom' => $summaryDateFrom,
+        'queueSummaryDateTo' => $summaryDateTo,
+        'queueSummaryLabel' => $queueSummaryLabel,
         'currentPage' => $queueResult['page'],
         'totalPages' => $queueResult['total_pages'],
         'totalItems' => $queueResult['total'],

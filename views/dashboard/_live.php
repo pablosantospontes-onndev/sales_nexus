@@ -301,7 +301,7 @@ $previousMonthLabel = $finalizedComparison['previous_month_label'] ?? '';
                 <h3>Finalizadas na semana atual do m&ecirc;s</h3>
                 <small class="muted">Atual: <?= e($currentRangeLabel) ?></small>
                 <small class="muted">M&ecirc;s anterior: <?= e($previousRangeLabel) ?></small>
-                <small class="muted">Domingos em vermelho</small>
+                <small class="muted">- OBS: Domingos destacados em vermelho</small>
             </div>
 
             <div class="weekly-comparison-totals">

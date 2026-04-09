@@ -23,9 +23,6 @@ final class ProductCatalogExportService
         '3P',
         'DUO',
         'PERIODO',
-        'ativo',
-        'created_at',
-        'updated_at',
     ];
 
     /**
@@ -73,9 +70,6 @@ final class ProductCatalogExportService
                 (string) ($product['3P'] ?? ''),
                 (string) ($product['DUO'] ?? ''),
                 (string) ($product['PERIODO'] ?? ''),
-                ((int) ($product['ativo'] ?? 0)) === 1 ? '1' : '0',
-                (string) ($product['created_at'] ?? ''),
-                (string) ($product['updated_at'] ?? ''),
             ];
         }
 

@@ -475,7 +475,7 @@ function setupDateRangePickers() {
 
             const text = formatDateRangeLabel(startDate, endDate);
             label.textContent = text;
-            summary.textContent = text;
+            summary.textContent = startDate && !endDate ? 'Selecione a data final' : text;
             label.classList.toggle('date-range-label-empty', !startDate && !endDate);
         }
 
@@ -574,6 +574,7 @@ function setupDateRangePickers() {
         });
 
         grid.addEventListener('click', (event) => {
+            event.stopPropagation();
             const dayButton = event.target.closest('[data-date-value]');
 
             if (!(dayButton instanceof HTMLButtonElement)) {
@@ -602,9 +603,6 @@ function setupDateRangePickers() {
             syncInputs();
             renderCalendar();
 
-            if (startDate && endDate) {
-                closePicker();
-            }
         });
 
         document.addEventListener('click', (event) => {
@@ -1513,6 +1511,135 @@ function setupQueueOperationFilter() {
     });
 
     updateSummary();
+}
+
+function setupQueueChecklistFilter({
+    rootSelector,
+    triggerSelector,
+    dropdownSelector,
+    summarySelector,
+    checkboxSelector,
+    emptyLabel,
+}) {
+    const root = document.querySelector(rootSelector);
+
+    if (!(root instanceof HTMLElement)) {
+        return;
+    }
+
+    const trigger = root.querySelector(triggerSelector);
+    const dropdown = root.querySelector(dropdownSelector);
+    const summary = root.querySelector(summarySelector);
+    const checkboxes = Array.from(root.querySelectorAll(checkboxSelector)).filter((checkbox) => checkbox instanceof HTMLInputElement);
+
+    if (!(trigger instanceof HTMLButtonElement) || !(dropdown instanceof HTMLElement) || !(summary instanceof HTMLElement)) {
+        return;
+    }
+
+    function updateSummary() {
+        const selectedLabels = checkboxes
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => checkbox.value);
+
+        if (selectedLabels.length === 0) {
+            summary.textContent = emptyLabel;
+            setElementTooltip(trigger, emptyLabel);
+            return;
+        }
+
+        summary.textContent = selectedLabels.length === 1
+            ? selectedLabels[0]
+            : `${selectedLabels.length} selecionados`;
+        setElementTooltip(trigger, selectedLabels.join(', '));
+    }
+
+    function setOpen(isOpen) {
+        root.classList.toggle('is-open', isOpen);
+        dropdown.hidden = !isOpen;
+        trigger.setAttribute('aria-expanded', String(isOpen));
+    }
+
+    trigger.addEventListener('click', () => {
+        setOpen(dropdown.hidden);
+    });
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', updateSummary);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!root.contains(event.target)) {
+            setOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            setOpen(false);
+        }
+    });
+
+    updateSummary();
+}
+
+function setupQueueExtraFiltersToggle() {
+    const toggle = document.querySelector('[data-queue-extra-toggle]');
+    const panel = document.querySelector('[data-queue-extra-filters]');
+
+    if (!(toggle instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
+        return;
+    }
+
+    const icon = toggle.querySelector('[data-queue-extra-icon]');
+
+    function setOpen(isOpen) {
+        panel.hidden = !isOpen;
+        toggle.setAttribute('aria-expanded', String(isOpen));
+        if (icon instanceof HTMLElement) {
+            icon.textContent = isOpen ? '\u2212' : '+';
+        }
+        setElementTooltip(toggle, isOpen ? 'Ocultar filtros' : 'Exibir mais filtros');
+    }
+
+    toggle.addEventListener('click', () => {
+        setOpen(panel.hidden);
+    });
+
+    setOpen(!panel.hasAttribute('hidden'));
+}
+
+function setupQueueExtraFiltersAutoSubmit() {
+    const panel = document.querySelector('[data-queue-extra-filters]');
+
+    if (!(panel instanceof HTMLElement)) {
+        return;
+    }
+
+    const form = panel.closest('form');
+
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+
+    let submitTimeout = null;
+
+    function scheduleSubmit() {
+        window.clearTimeout(submitTimeout);
+        submitTimeout = window.setTimeout(() => {
+            form.submit();
+        }, 250);
+    }
+
+    panel.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+        if (target.type !== 'checkbox') {
+            return;
+        }
+        scheduleSubmit();
+    });
 }
 
 function setupHierarchyBaseFilter() {
@@ -3340,6 +3467,40 @@ setupQueueStatusFilter();
 setupQueueCustomerTypeFilter();
 setupQueueModalityFilter();
 setupQueueOperationFilter();
+setupQueueExtraFiltersToggle();
+setupQueueExtraFiltersAutoSubmit();
+setupQueueChecklistFilter({
+    rootSelector: '[data-queue-base-group-filter]',
+    triggerSelector: '[data-queue-base-group-trigger]',
+    dropdownSelector: '[data-queue-base-group-dropdown]',
+    summarySelector: '[data-queue-base-group-summary]',
+    checkboxSelector: '[data-queue-base-group-checkbox]',
+    emptyLabel: 'Todos',
+});
+setupQueueChecklistFilter({
+    rootSelector: '[data-queue-manager-filter]',
+    triggerSelector: '[data-queue-manager-trigger]',
+    dropdownSelector: '[data-queue-manager-dropdown]',
+    summarySelector: '[data-queue-manager-summary]',
+    checkboxSelector: '[data-queue-manager-checkbox]',
+    emptyLabel: 'Todos',
+});
+setupQueueChecklistFilter({
+    rootSelector: '[data-queue-coordinator-filter]',
+    triggerSelector: '[data-queue-coordinator-trigger]',
+    dropdownSelector: '[data-queue-coordinator-dropdown]',
+    summarySelector: '[data-queue-coordinator-summary]',
+    checkboxSelector: '[data-queue-coordinator-checkbox]',
+    emptyLabel: 'Todos',
+});
+setupQueueChecklistFilter({
+    rootSelector: '[data-queue-supervisor-filter]',
+    triggerSelector: '[data-queue-supervisor-trigger]',
+    dropdownSelector: '[data-queue-supervisor-dropdown]',
+    summarySelector: '[data-queue-supervisor-summary]',
+    checkboxSelector: '[data-queue-supervisor-checkbox]',
+    emptyLabel: 'Todos',
+});
 setupHierarchyBaseFilter();
 setupHierarchyRoleFilter();
 setupReportsChecklistFilters();

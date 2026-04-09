@@ -149,6 +149,19 @@ html.theme-dark .auth-shell {
     z-index: 3;
 }
 
+.auth-theme-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-theme-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #6c8196;
+}
+
 .auth-visual {
     position: relative;
     padding: 42px 32px 28px;
@@ -627,13 +640,13 @@ html.theme-dark .auth-shell {
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 14px 28px rgba(9, 21, 85, 0.05);
+    box-shadow: none;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .auth-input-shell:focus-within {
     border-color: #799dc1;
-    box-shadow: 0 0 0 3px rgba(9, 21, 85, 0.08), 0 16px 30px rgba(9, 21, 85, 0.06);
+    box-shadow: none;
 }
 
 .auth-input-icon {
@@ -1622,6 +1635,13 @@ html.theme-dark .sidebar-logo-dark {
     color: var(--muted);
     font-size: 11px;
     line-height: 1.2;
+}
+
+.queue-overview-footnote {
+    margin-top: 8px;
+    margin-left: 4px;
+    font-size: 11px;
+    color: var(--muted);
 }
 
 .queue-overview-card.is-completed {
@@ -2777,6 +2797,8 @@ html.theme-dark .reports-search-icon {
 }
 
 .dashboard-mode-button {
+    display: inline-flex;
+    align-items: center;
     min-width: 184px;
     gap: 9px;
 }
@@ -2789,6 +2811,7 @@ html.theme-dark .reports-search-icon {
     stroke-width: 1.9;
     stroke-linecap: round;
     stroke-linejoin: round;
+    display: block;
 }
 
 .dashboard-mode-button.is-active {
@@ -4247,141 +4270,217 @@ tbody tr:hover {
 }
 
 .queue-filters-form {
-    flex-wrap: nowrap;
+    display: block;
+}
+
+.queue-filters-main {
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
+    align-items: end;
 }
 
-.queue-filters-form .queue-status-filter {
+.queue-filters-main .queue-status-filter {
     flex: 0 0 150px;
     min-width: 150px;
 }
 
-.queue-filters-form label.queue-filter-customer-type {
+.queue-filters-main label.queue-filter-customer-type {
     flex: 0 0 150px;
     min-width: 150px;
 }
 
-.queue-filters-form .queue-customer-type-filter {
+.queue-filters-main .queue-customer-type-filter {
     flex: 0 0 150px;
     min-width: 150px;
 }
 
-.queue-filters-form .queue-modality-filter {
+.queue-filters-main .queue-modality-filter {
     flex: 0 0 148px;
     min-width: 148px;
 }
 
-.queue-filters-form .queue-operation-filter {
+.queue-filters-main .queue-operation-filter {
     flex: 0 0 190px;
     min-width: 190px;
 }
 
-.queue-filters-form .date-range-field {
+.queue-filters-main .queue-base-group-filter,
+.queue-filters-main .queue-manager-filter,
+.queue-filters-main .queue-coordinator-filter,
+.queue-filters-main .queue-supervisor-filter {
+    flex: 1 1 240px;
+    min-width: 240px;
+}
+
+.queue-extra-toggle {
+    min-width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.queue-filters-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.queue-filters-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--success);
+    background: rgba(31, 122, 69, 0.12);
+    border: 1px solid rgba(31, 122, 69, 0.22);
+    position: relative;
+    top: -4px;
+}
+
+.queue-extra-toggle-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.queue-extra-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+    flex: 0 0 100%;
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1px dashed var(--line);
+}
+
+.queue-extra-filters .queue-base-group-filter,
+.queue-extra-filters .queue-manager-filter,
+.queue-extra-filters .queue-coordinator-filter,
+.queue-extra-filters .queue-supervisor-filter {
+    flex: 1 1 260px;
+    min-width: 260px;
+}
+
+.queue-filters-main .date-range-field {
     flex: 1 1 320px;
     min-width: 260px;
 }
 
-.queue-filters-form .queue-search-field {
+.queue-filters-main .queue-search-field {
     flex: 0 0 auto;
 }
 
-.queue-filters-form .form-actions-right {
+.queue-filters-main .form-actions-right {
     flex: 0 0 auto;
     flex-wrap: nowrap;
     margin-left: auto;
 }
 
-.queue-filters-form.is-search-open .queue-status-filter {
+.queue-filters-form.is-search-open .queue-filters-main .queue-status-filter {
     flex-basis: 138px;
     min-width: 138px;
 }
 
-.queue-filters-form.is-search-open .queue-customer-type-filter {
+.queue-filters-form.is-search-open .queue-filters-main .queue-customer-type-filter {
     flex-basis: 124px;
     min-width: 124px;
 }
 
-.queue-filters-form.is-search-open .queue-modality-filter {
+.queue-filters-form.is-search-open .queue-filters-main .queue-modality-filter {
     flex-basis: 132px;
     min-width: 132px;
 }
 
-.queue-filters-form.is-search-open .queue-operation-filter {
+.queue-filters-form.is-search-open .queue-filters-main .queue-operation-filter {
     flex-basis: 176px;
     min-width: 176px;
 }
 
-.queue-filters-form.is-search-open .date-range-field {
+.queue-filters-form.is-search-open .queue-filters-main .date-range-field {
     flex-basis: 260px;
     min-width: 220px;
 }
 
-.queue-filters-form.is-search-open .queue-search-field.is-open {
+.queue-filters-form.is-search-open .queue-filters-main .queue-search-field.is-open {
     flex-basis: 220px;
     min-width: 220px;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main {
     display: grid;
     grid-template-columns: 134px 126px 138px 176px minmax(220px, 1fr) 48px auto;
     gap: 12px;
     align-items: end;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form.is-search-open {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form.is-search-open .queue-filters-main {
     grid-template-columns: 126px 118px 130px 166px minmax(210px, 1fr) 196px auto;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-status-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-customer-type-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-modality-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-operation-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .date-range-field,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-field,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .form-actions-right {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-status-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-customer-type-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-modality-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-operation-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .date-range-field,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-field,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .form-actions-right {
     min-width: 0;
     width: 100%;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-status-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-customer-type-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-modality-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-operation-filter,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .date-range-field,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-field {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-status-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-customer-type-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-modality-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-operation-filter,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .date-range-field,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-field {
     flex: none;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-field {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-field {
     gap: 6px;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-field.is-open {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-field.is-open {
     flex: none;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-toggle {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-toggle {
     width: 48px;
     min-width: 48px;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .form-actions-right {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .form-actions-right {
     margin-left: 0;
     flex-wrap: nowrap;
     justify-content: flex-start;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .date-range-trigger span {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .date-range-trigger span {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-search-field > span,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .date-range-field > span,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form .queue-status-filter > span,
-.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-form label > span {
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-search-field > span,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .date-range-field > span,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main .queue-status-filter > span,
+.app-shell:not(.sidebar-collapsed):not(.sidebar-mini-collapsed) .queue-filters-main label > span {
     white-space: nowrap;
 }
 
@@ -4547,6 +4646,13 @@ tbody tr:hover {
 .date-range-footer .muted {
     display: block;
     line-height: 1.4;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.date-range-footer .form-actions-right {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .status-pill {
@@ -6740,6 +6846,10 @@ html.theme-dark .sidebar-theme-label {
     color: #98aec7;
 }
 
+html.theme-dark .auth-theme-label {
+    color: #98aec7;
+}
+
 html.theme-dark .sidebar-mini-toggle {
     border-color: rgba(43, 64, 93, 0.92);
     background: linear-gradient(180deg, #111d2d 0%, #0d1725 100%);
@@ -7074,12 +7184,12 @@ html.theme-dark .auth-form-side {
 html.theme-dark .auth-input-shell {
     background: rgba(12, 20, 33, 0.96);
     border-color: rgba(46, 67, 98, 0.88);
-    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.18);
+    box-shadow: none;
 }
 
 html.theme-dark .auth-input-shell:focus-within {
     border-color: rgba(26, 200, 232, 0.54);
-    box-shadow: 0 0 0 3px rgba(26, 200, 232, 0.16), 0 18px 34px rgba(0, 0, 0, 0.22);
+    box-shadow: none;
 }
 
 html.theme-dark .auth-input-icon {

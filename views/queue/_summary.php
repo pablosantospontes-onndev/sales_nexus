@@ -64,4 +64,7 @@ $queueOverviewCards = [
             </article>
         <?php endforeach; ?>
     </div>
+    <?php if (! empty($queueSummaryLabel)): ?>
+        <div class="queue-overview-footnote"><?= e((string) $queueSummaryLabel) ?></div>
+    <?php endif; ?>
 </section>

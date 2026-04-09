@@ -89,6 +89,7 @@
                 </div>
 
                 <form method="get" action="<?= e(url('products/export')) ?>" class="product-export-form">
+                    <input type="hidden" name="route" value="products/export">
                     <label>
                         <span>PER&Iacute;ODO</span>
                         <select name="period" required>
